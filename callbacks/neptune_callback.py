@@ -1,7 +1,6 @@
 import os
 import csv
 import gym
-import json
 import numpy as np
 import neptune
 

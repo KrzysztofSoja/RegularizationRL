@@ -11,6 +11,8 @@ from stable_baselines3.common.type_aliases import GymStepReturn
 
 class CyclicMonitor(Monitor):
 
+    """ This monitor delete history, when size of csv file is too big. """
+
     def __init__(self, env: gym.Env, max_file_size: int = 100, *args, **kwargs):
         super(CyclicMonitor, self).__init__(*args, env=env, **kwargs)
         self.file_size = 0
