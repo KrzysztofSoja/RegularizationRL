@@ -3,7 +3,6 @@ import gym
 
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.monitor import Monitor
 
 from getters import *
 from callbacks.neptune_callback import NeptuneCallback
@@ -50,10 +49,10 @@ class Runner:
             train_env.reset()
 
         eval_env = gym.make(self.env_name)
-        model = algo_getter.get(train_env, verbose=1)
+        model = algo_getter.get(train_env, verbose=0)
         model.learn(total_timesteps=self.steps, callback=NeptuneCallback(logs_freq=100,
                                                                          model=model,
-                                                                         evaluate_freq=10_000,
+                                                                         evaluate_freq=1_000_000,
                                                                          neptune_account_name="nkrsi",
                                                                          project_name="rl-first-run",
                                                                          experiment_name=model.__class__.__name__,
@@ -62,15 +61,13 @@ class Runner:
         return model
 
 
-envs = ['HalfCheetah-v2', 'Ant-v2', 'Walker2d-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
+envs = ['CartPole-v1', 'HalfCheetah-v2', 'Ant-v2', 'Walker2d-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
 algo_getters = [PPOGetter(), A2CGetter(), DDPGGetter(), SACGetter(), TD3Gettter()]
 
 for env in envs:
     for algo_getter in algo_getters:
         print("Experiment start in envinronment {} using {}". format(env, str(algo_getter)))
-        runner = Runner(env, algo_getter, 100_000_000, 8)
+        runner = Runner(env, algo_getter, 10_000_000, 1)
         runner.run()
         break
     break
-
-# ToDo:

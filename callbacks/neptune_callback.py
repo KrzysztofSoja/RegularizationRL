@@ -55,16 +55,15 @@ class NeptuneCallback(BaseCallback):
                 with open(file_or_dir, 'r') as csv_file:
                     reader = csv.DictReader(csv_file)
 
-                    rows = list(reader)[2:]
+                    rows = list(reader)[1:]
                     if len(rows) == 0:
                         continue
                     lasts = min(4, len(rows))
                     rows = rows[-lasts:]
 
                     for row in rows:
-                        keys = list(row.keys())
-                        last_rewards.append(float(row[keys[0]]))
-                        last_ep_lengths.append(float(row[keys[1]]))
+                        last_rewards.append(float(row['r']))
+                        last_ep_lengths.append(float(row['l']))
         if len(last_rewards) == 0:
             return
 
@@ -87,7 +86,6 @@ class NeptuneCallback(BaseCallback):
         for _ in range(self.video_length + 1):
             action, _ = self.model.predict(observation)
             observation, _, done, _ = video_env.step(action)
-
         video_env.close()
 
         path_to_video = os.path.join(self.log_dir, video_name + '-step-0-to-step-{}.mp4'.format(self.video_length))
