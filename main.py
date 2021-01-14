@@ -2,7 +2,7 @@ import os
 import gym
 
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 from getters import *
 from callbacks.neptune_callback import NeptuneCallback
@@ -41,8 +41,7 @@ class Runner:
         path_to_log = os.path.join(os.getcwd(), '{}'.format(str(self.algo_getter)))
 
         if algo_getter.multi_processing:
-            train_env = SubprocVecEnv([Runner._make_env(self.env_name, i, path_to_log)
-                                       for i in range(self.workers)], start_method='fork')
+            train_env = DummyVecEnv([Runner._make_env(self.env_name, i, path_to_log) for i in range(self.workers)])
             train_env.reset()
         else:
             train_env = Runner._make_env(self.env_name, 0, path_to_log)()

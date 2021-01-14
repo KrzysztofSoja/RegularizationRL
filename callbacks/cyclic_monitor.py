@@ -107,8 +107,10 @@ class CyclicMonitor(gym.Wrapper):
         :param action: the action
         :return: observation, reward, done, information
         """
+
+        # ToDo: Czy moje środowiska nie wymagają resetu.
         if self.needs_reset:
-            raise RuntimeError("Tried to step environment that needs reset")
+            self.reset()
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
         if done:
