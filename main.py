@@ -1,72 +1,86 @@
 import os
 import gym
+import time
+import argparse
+import stable_baselines3 as sb
+
+from stable_baselines3.ppo import MlpPolicy as PPOMlpPolicy
+from stable_baselines3.a2c import MlpPolicy as A2CMlpPolicy
+from stable_baselines3.sac import MlpPolicy as SACMlpPolicy
+from stable_baselines3.dqn import MlpPolicy as DQNMlpPolicy
+from stable_baselines3.ddpg import MlpPolicy as DDPGMlpPolicy
+from stable_baselines3.td3 import MlpPolicy as TD3MlpPolicy
 
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv
 
-from getters import *
-from callbacks.neptune_callback import NeptuneCallback
 from callbacks.cyclic_monitor import CyclicMonitor
+from callbacks.neptune_callback import NeptuneCallback
 
 
-class Runner:
+ENVIRONMENT_NAMES = ['HalfCheetah-v2', 'Ant-v2', 'Walker2d-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
+POLICY = {'PPO': PPOMlpPolicy, 'A2C': A2CMlpPolicy, 'SAC': SACMlpPolicy, 'DQN': DQNMlpPolicy, 'DDPG': DDPGMlpPolicy,
+          'TD3': TD3MlpPolicy}
+MULTI_ENV = {'PPO', 'A2C'}
 
-    def __init__(self, env_name: str, algo_getter: AbstractAlgoGetter, steps: int, workers: int):
-        self.env_name = env_name
-        self.algo_getter = algo_getter
-        self.steps = steps
-        self.workers = workers
-
-    @staticmethod
-    def _make_env(env_name: str, rank: int, log_dir: str, seed: int = 0):
-        """
-        Utility function for multiprocessed env.
-        :param env_name: the environment ID
-        :param rank: index of the subprocess
-        :param log_dir: Path to log directory.
-        :param seed: the inital seed for RNG
-        """
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-
-        def _init():
-            env = gym.make(env_name)
-            env.seed(seed + rank)
-            env = CyclicMonitor(env, max_file_size=20, filename=os.path.join(log_dir, env_name+'_'+str(rank)))
-            return env
-        set_random_seed(seed)
-        return _init
-
-    def run(self):
-        path_to_log = os.path.join(os.getcwd(), '{}'.format(str(self.algo_getter)))
-
-        if algo_getter.multi_processing:
-            train_env = DummyVecEnv([Runner._make_env(self.env_name, i, path_to_log) for i in range(self.workers)])
-            train_env.reset()
-        else:
-            train_env = Runner._make_env(self.env_name, 0, path_to_log)()
-            train_env.reset()
-
-        eval_env = gym.make(self.env_name)
-        model = algo_getter.get(train_env, verbose=0)
-        model.learn(total_timesteps=self.steps, callback=NeptuneCallback(logs_freq=100,
-                                                                         model=model,
-                                                                         evaluate_freq=1_000_000,
-                                                                         neptune_account_name="nkrsi",
-                                                                         project_name="rl-first-run",
-                                                                         experiment_name=model.__class__.__name__,
-                                                                         eval_env=eval_env,
-                                                                         log_dir=path_to_log))
-        return model
+MAIN_DIR = os.path.abspath(os.path.join(os.path.realpath(__file__), os.pardir, 'logs'))
+if not os.path.exists(MAIN_DIR):
+    os.mkdir(MAIN_DIR)
 
 
-envs = ['CartPole-v1', 'HalfCheetah-v2', 'Ant-v2', 'Walker2d-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
-algo_getters = [PPOGetter(), A2CGetter(), DDPGGetter(), SACGetter(), TD3Gettter()]
+def _make_env(env_name: str, rank: int, path_to_logs: str, seed: int = 0):
+    """
+    Utility function for multiprocessed env.
+    :param env_name: the environment_name ID
+    :param rank: index of the subprocess
+    :param log_dir: Path to log directory.
+    :param seed: the inital seed for RNG
+    """
 
-for env in envs:
-    for algo_getter in algo_getters:
-        print("Experiment start in envinronment {} using {}". format(env, str(algo_getter)))
-        runner = Runner(env, algo_getter, 10_000_000, 1)
-        runner.run()
-        break
-    break
+    def _init():
+        env = gym.make(env_name)
+        env.seed(seed + rank)
+        env = CyclicMonitor(env, max_file_size=20, filename=os.path.join(path_to_logs, f'worker_{rank}'))
+        return env
+
+    set_random_seed(seed)
+    return _init
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env', type=str, required=True)
+    parser.add_argument('--algo', type=str, required=True)
+    parser.add_argument('--steps', type=int, default=1_000_000)
+    parser.add_argument('--workers', type=int, default=1)
+    args = parser.parse_args()
+
+
+    assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
+    assert args.algo in sb.__dict__, "Algorithm name must be defined in stable_baselines3."
+
+    if args.algo not in MULTI_ENV and args.workers != 1:
+        print('Chosen algorithm don\'t support multi workers environment.')
+        args.workers = 1
+
+    print(f'Starting experiment with {args.algo} algorithm in {args.env} with {args.workers} for {args.steps} steps.')
+
+    path_to_logs = os.path.join(MAIN_DIR, args.algo + '-' + args.env + '-' + str(time.time()).replace('.', ''))
+    if not os.path.exists(path_to_logs):
+        os.mkdir(path_to_logs)
+
+    if args.algo in MULTI_ENV:
+        train_env = DummyVecEnv([_make_env(args.env, i, path_to_logs) for i in range(args.workers)])
+        eval_env = gym.make(args.env)
+    else:
+        train_env = CyclicMonitor(gym.make(args.env), max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
+        eval_env = gym.make(args.env)
+
+    model = sb.__dict__[args.algo](POLICY[args.algo], train_env, verbose=1)
+    model.learn(total_timesteps=args.steps, callback=NeptuneCallback(model=model,
+                                                                     experiment_name=args.env,
+                                                                     neptune_account_name='nkrsi',
+                                                                     project_name='rl-first-run',
+                                                                     environment_name=args.env,
+                                                                     log_dir=path_to_logs))
+    model.save(os.path.join(path_to_logs, 'last_model.plk'))

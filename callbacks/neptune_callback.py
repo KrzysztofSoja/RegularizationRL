@@ -15,13 +15,13 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 class NeptuneCallback(BaseCallback):
     def __init__(self,
                  model: BaseAlgorithm,
-                 logs_freq: int,
-                 evaluate_freq: int,
+                 environment_name: str,
                  neptune_account_name: str,
                  project_name: str,
                  experiment_name: str,
-                 eval_env: Union[gym.Env, VecEnv],
                  log_dir: str,
+                 logs_freq: int = 100,
+                 evaluate_freq: int = 10_000,
                  verbose: int = 0,
                  video_length: int = 1000):
         super(NeptuneCallback, self).__init__(verbose)
@@ -36,12 +36,14 @@ class NeptuneCallback(BaseCallback):
         self.project_name = project_name
         self.experiment_name = experiment_name
 
-        self.eval_env = eval_env
+        self.environment_name = environment_name
 
     def _init_callback(self) -> None:
         neptune.init(self.neptune_account_name + '/' + self.project_name)
         neptune.create_experiment(self.experiment_name)
+        neptune.append_tags(self.model.__class__.__name__, self.environment_name)
 
+        neptune.log_text('Path to local files', self.log_dir)
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
 
@@ -76,7 +78,7 @@ class NeptuneCallback(BaseCallback):
     def _make_video(self):
         video_name = self.experiment_name + '-step-' + str(self.n_calls)
 
-        video_env = DummyVecEnv([lambda: self.eval_env])
+        video_env = DummyVecEnv([lambda: gym.make(self.environment_name)])
         video_env = VecVideoRecorder(video_env, self.log_dir,
                                      record_video_trigger=lambda x: x == 0,
                                      video_length=self.video_length,
@@ -96,9 +98,10 @@ class NeptuneCallback(BaseCallback):
         os.remove(path_to_json)
 
     def _evaluate(self):
+        validate_environment = gym.make(self.environment_name)
         episode_rewards, episode_lengths = evaluate_policy(
             self.model,
-            self.eval_env,
+            validate_environment,
             n_eval_episodes=5,
             render=False,
             deterministic=True,
@@ -133,6 +136,6 @@ class NeptuneCallback(BaseCallback):
 
             if mean_reward > self.best_mean_reward:
                 self.best_mean_reward = mean_reward
-                self.model.save(os.path.join(self.log_dir, "best_model"))
+                self.model.save(os.path.join(self.log_dir, "best_model.plk"))
 
         return True

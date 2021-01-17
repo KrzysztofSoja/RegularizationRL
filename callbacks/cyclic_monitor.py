@@ -13,9 +13,9 @@ class CyclicMonitor(gym.Wrapper):
     """
     A monitor wrapper for Gym environments, it is used to know the episode reward, length, time and other data.
 
-    :param env: The environment
+    :param env: The environment_name
     :param filename: the location to save a log file, can be None for no log
-    :param allow_early_resets: allows the reset of the environment before it is done
+    :param allow_early_resets: allows the reset of the environment_name before it is done
     :param reset_keywords: extra keywords for the reset call,
         if extra parameters are needed at reset
     :param info_keywords: extra information to log, from the information return of env.step()
@@ -66,14 +66,14 @@ class CyclicMonitor(gym.Wrapper):
 
     def reset(self, **kwargs) -> GymObs:
         """
-        Calls the Gym environment reset. Can only be called if the environment is over, or if allow_early_resets is True
+        Calls the Gym environment_name reset. Can only be called if the environment_name is over, or if allow_early_resets is True
 
         :param kwargs: Extra keywords saved for the next episode. only if defined by reset_keywords
-        :return: the first observation of the environment
+        :return: the first observation of the environment_name
         """
         if not self.allow_early_resets and not self.needs_reset:
             raise RuntimeError(
-                "Tried to reset an environment before done. If you want to allow early resets, "
+                "Tried to reset an environment_name before done. If you want to allow early resets, "
                 "wrap your env with Monitor(env, path, allow_early_resets=True)"
             )
         self.rewards = []
@@ -102,7 +102,7 @@ class CyclicMonitor(gym.Wrapper):
 
     def step(self, action: Union[np.ndarray, int]) -> GymStepReturn:
         """
-        Step the environment with the given action. Reset file, when number of lines is bigger than max size.
+        Step the environment_name with the given action. Reset file, when number of lines is bigger than max size.
 
         :param action: the action
         :return: observation, reward, done, information
@@ -137,7 +137,7 @@ class CyclicMonitor(gym.Wrapper):
 
     def close(self) -> None:
         """
-        Closes the environment
+        Closes the environment_name
         """
         super(CyclicMonitor, self).close()
         if self.file_handler is not None:
