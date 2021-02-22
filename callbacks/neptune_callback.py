@@ -8,22 +8,22 @@ from typing import Tuple, Union, NoReturn
 from neptunecontrib.api.video import log_video
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import VecEnv, VecVideoRecorder, DummyVecEnv
-from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.vec_env import VecVideoRecorder, DummyVecEnv
 
 
 class NeptuneCallback(BaseCallback):
     def __init__(self,
-                 model: BaseAlgorithm,
-                 environment_name: str,
-                 neptune_account_name: str,
-                 project_name: str,
-                 experiment_name: str,
-                 log_dir: str,
-                 logs_freq: int = 100,
-                 evaluate_freq: int = 10_000,
-                 verbose: int = 0,
-                 video_length: int = 1000):
+                 model,
+                 environment_name,
+                 neptune_account_name,
+                 project_name,
+                 experiment_name,
+                 log_dir,
+                 logs_freq=100,
+                 evaluate_freq=10_000,
+                 verbose=0,
+                 video_length=1000,
+                 make_video=False):
         super(NeptuneCallback, self).__init__(verbose)
         self.model = model
         self.logs_freq = logs_freq
@@ -31,6 +31,7 @@ class NeptuneCallback(BaseCallback):
         self.log_dir = log_dir
         self.best_mean_reward = -np.inf
         self.video_length = video_length
+        self.make_video = make_video
 
         self.neptune_account_name = neptune_account_name
         self.project_name = project_name
@@ -76,9 +77,9 @@ class NeptuneCallback(BaseCallback):
         return mean_reward, std_reward, mean_ep_lengths, std_ep_lengths
 
     def _make_video(self):
-        video_name = self.experiment_name + '-step-' + str(self.n_calls)
-
         video_env = DummyVecEnv([lambda: gym.make(self.environment_name)])
+
+        video_name = self.experiment_name + '-step-' + str(self.n_calls)
         video_env = VecVideoRecorder(video_env, self.log_dir,
                                      record_video_trigger=lambda x: x == 0,
                                      video_length=self.video_length,
@@ -127,7 +128,8 @@ class NeptuneCallback(BaseCallback):
 
         if self.n_calls % self.evaluate_freq == 0:
             mean_reward, std_reward, mean_ep_length, std_ep_length = self._evaluate()
-            self._make_video()
+            if self.make_video:
+                self._make_video()
 
             neptune.log_metric('mean reward from evaluate', mean_reward)
             neptune.log_metric('std_reward from evaluate', std_reward)
