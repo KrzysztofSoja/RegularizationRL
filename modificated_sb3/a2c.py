@@ -1,7 +1,6 @@
-from typing import Dict, Optional, Type, Union, Any
-from stable_baselines3 import A2C
 from stable_baselines3.common.policies import ActorCriticPolicy as BaseActorCriticPolicy
 from stable_baselines3.common.torch_layers import MlpExtractor
+from typing import Dict, Optional, Type, Union, Any
 
 from common.torch_layers import MlpExtractorWithDropout
 
@@ -28,6 +27,7 @@ class ActorCriticPolicy(BaseActorCriticPolicy):
             self.features_dim, net_arch=self.net_arch, activation_fn=self.activation_fn, device=self.device,
             **self.mpl_extractor_kwargs
         )
+
 
 MlpPolicy = ActorCriticPolicy
 
