@@ -8,9 +8,9 @@ from common.torch_layers import MlpExtractorWithDropout
 
 class ActorCriticPolicy(BaseActorCriticPolicy):
 
-    def __init__(self, *args, mlp_extractor_class=Union[Type[MlpExtractor], Type[MlpExtractorWithDropout]],
+    def __init__(self, *args, mlp_extractor_class: Union[Type[MlpExtractor], Type[MlpExtractorWithDropout]] = None,
                  mpl_extractor_kwargs: Optional[Dict[str, Any]] = None, **kwargs):
-        self.mlp_extractor_class = mlp_extractor_class
+        self.mlp_extractor_class = MlpExtractor if mlp_extractor_class is None else mlp_extractor_class
         self.mpl_extractor_kwargs = dict() if mpl_extractor_kwargs is None else mpl_extractor_kwargs
 
         super(ActorCriticPolicy, self).__init__(*args, **kwargs)

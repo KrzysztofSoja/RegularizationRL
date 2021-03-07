@@ -1,7 +1,8 @@
-ENVIRONMENT_NAMES = ['HalfCheetah-v2', 'Ant-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
+ENVIRONMENT_NAMES = ['HalfCheetah-v2'] # , 'Ant-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
 ALGORITHMS = ['PPO', 'A2C', 'SAC', 'DDPG', 'TD3', 'TQC']
-STEPS = 1_000_000
+STEPS = 1_000
 WORKERS = 8
+DROPOUT = 0.5  # flout number from 0 to 1 or False
 
 lines = []
 
@@ -11,6 +12,9 @@ n_experiment = 0
 for environment_name in ENVIRONMENT_NAMES:
     for algorithm in ALGORITHMS:
         command = f"python main.py --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
+
+        if DROPOUT is not False:
+            command += f" --dropout {DROPOUT}"
 
         if n_experiment % 2 == 0:
             lines.append(f"nohup {command} &\n")
