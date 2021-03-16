@@ -60,6 +60,7 @@ if __name__ == '__main__':
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--make_video', default=False, action='store_true')
     parser.add_argument('--dropout', type=float, default=False)
+    parser.add_argument('--weight_decay', type=float, default=False)
     args = parser.parse_args()
 
     assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
@@ -86,7 +87,7 @@ if __name__ == '__main__':
         eval_env = gym.make(args.env)
 
     policy_kwargs = dict()
-    if args.dropout is not False:
+    if not args.dropout:
         if args.algo in {'A2C', 'PPO'}:
             policy_kwargs['mlp_extractor_class'] = MlpExtractorWithDropout
             policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate': args.dropout}
@@ -94,8 +95,12 @@ if __name__ == '__main__':
             policy_kwargs['create_network_function'] = create_mlp_with_dropout
             policy_kwargs['dropout_rate'] = args.dropout
 
+    if not args.weight_decay:
+        policy_kwargs['weight_decay'] = args.weight_decay
+
     if args.algo == 'TQC':
-        policy_kwargs = dict(n_critics=2, n_quantiles=25)
+        policy_kwargs['n_critics'] = 2
+        policy_kwargs['n_quantiles'] = 25
         model = sbc.TQC(TQCMlpPolicy, train_env, top_quantiles_to_drop_per_net=2, verbose=1,
                         policy_kwargs=policy_kwargs)
     else:

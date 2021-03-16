@@ -236,6 +236,7 @@ class TQCPolicy(BaseTQCPolicy):
             normalize_images: bool = True,
             optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
             optimizer_kwargs: Optional[Dict[str, Any]] = None,
+            weight_decay: Optional[float] = 0.0,
             n_quantiles: int = 25,
             n_critics: int = 2,
             share_features_extractor: bool = True,
@@ -244,6 +245,11 @@ class TQCPolicy(BaseTQCPolicy):
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+
+        if weight_decay != 0:
+            if optimizer_kwargs is None:
+                optimizer_kwargs = dict()
+            optimizer_kwargs['weight_decay'] = weight_decay
 
         super(BaseTQCPolicy, self).__init__(
             observation_space,
@@ -313,7 +319,9 @@ MlpPolicy = TQCPolicy
 if __name__ == '__main__':
     model = TQC(TQCPolicy, "Pendulum-v0",
                 policy_kwargs={'create_network_function': create_mlp_with_dropout,
-                               'dropout_rate': 0.5},
+                               'dropout_rate': 0.5,
+                               'weight_decay': 0.5},
                 verbose=1)
+    print(model.policy.actor.optimizer)
     model.learn(10_000)
 
