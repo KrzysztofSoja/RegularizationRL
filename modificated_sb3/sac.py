@@ -250,6 +250,7 @@ class SACPolicy(BaseSACPolicy):
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         create_network_function: callable = create_mlp,
         dropout_rate: Optional[float] = None,
+        weight_decay: Optional[float] = 0.0,
         normalize_images: bool = True,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
@@ -260,6 +261,11 @@ class SACPolicy(BaseSACPolicy):
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+
+        if weight_decay != 0:
+            if optimizer_kwargs is None:
+                optimizer_kwargs = dict()
+            optimizer_kwargs['weight_decay'] = weight_decay
 
         super(BaseSACPolicy, self).__init__(
             observation_space,
@@ -330,6 +336,8 @@ MlpPolicy = SACPolicy
 if __name__ == '__main__':
     model = SAC(SACPolicy, "Pendulum-v0",
                 policy_kwargs={'create_network_function': create_mlp_with_dropout,
-                               'dropout_rate': 0.5},
+                               'dropout_rate': 0.5,
+                               'weight_decay': 0.5},
                 verbose=1)
+    print(model.policy.actor.optimizer)
     model.learn(10_000)

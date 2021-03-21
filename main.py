@@ -60,6 +60,7 @@ if __name__ == '__main__':
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--make_video', default=False, action='store_true')
     parser.add_argument('--dropout', type=float, default=False)
+    parser.add_argument('--weight_decay', type=float, default=False)
     args = parser.parse_args()
 
     assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
@@ -71,8 +72,11 @@ if __name__ == '__main__':
         args.workers = 1
 
     print(f'Starting experiment with {args.algo} algorithm in {args.env} with {args.workers} for {args.steps} steps.')
-    if args.dropout is not False:
-        print(f'Algorithm using dropout with value {args.dropout}')
+    if args.dropout:
+        print(f'Algorithm using dropout with a value {args.dropout}')
+
+    if args.weight_decay:
+        print(f'Algorithm using weight decay with a value {args.weight_decay}')
 
     path_to_logs = os.path.join(MAIN_DIR, args.algo + '-' + args.env + '-' + str(time.time()).replace('.', ''))
     if not os.path.exists(path_to_logs):
@@ -86,7 +90,7 @@ if __name__ == '__main__':
         eval_env = gym.make(args.env)
 
     policy_kwargs = dict()
-    if args.dropout is not False:
+    if args.dropout:
         if args.algo in {'A2C', 'PPO'}:
             policy_kwargs['mlp_extractor_class'] = MlpExtractorWithDropout
             policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate': args.dropout}
@@ -94,8 +98,12 @@ if __name__ == '__main__':
             policy_kwargs['create_network_function'] = create_mlp_with_dropout
             policy_kwargs['dropout_rate'] = args.dropout
 
+    if args.weight_decay:
+        policy_kwargs['weight_decay'] = args.weight_decay
+
     if args.algo == 'TQC':
-        policy_kwargs = dict(n_critics=2, n_quantiles=25)
+        policy_kwargs['n_critics'] = 2
+        policy_kwargs['n_quantiles'] = 25
         model = sbc.TQC(TQCMlpPolicy, train_env, top_quantiles_to_drop_per_net=2, verbose=1,
                         policy_kwargs=policy_kwargs)
     else:

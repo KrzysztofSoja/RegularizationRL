@@ -116,6 +116,7 @@ class TD3Policy(BaseTD3Policy):
         net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
         activation_fn: Type[nn.Module] = nn.ReLU,
         dropout_rate: Optional[float] = None,
+        weight_decay: Optional[float] = 0.0,
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         normalize_images: bool = True,
@@ -125,7 +126,12 @@ class TD3Policy(BaseTD3Policy):
         n_critics: int = 2,
         share_features_extractor: bool = True,
     ):
+        if weight_decay != 0.0:
+            if optimizer_kwargs is None:
+                optimizer_kwargs = dict()
+            optimizer_kwargs['weight_decay'] = weight_decay
 
+        self.weight_decay = weight_decay
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             self.dropout_rate = .5 if dropout_rate is None else dropout_rate
@@ -149,6 +155,7 @@ class TD3Policy(BaseTD3Policy):
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             actor_kwargs['dropout_rate'] = self.dropout_rate
+
         return Actor(create_network=self.create_network_function, **actor_kwargs).to(self.device)
 
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> ContinuousCritic:
@@ -158,11 +165,16 @@ class TD3Policy(BaseTD3Policy):
         return ContinuousCritic(create_network=self.create_network_function, **critic_kwargs).to(self.device)
 
 
+
 MlpPolicy = TD3Policy
+
 
 if __name__ == '__main__':
     model = TD3(TD3Policy, "Pendulum-v0",
                 policy_kwargs={'create_network_function': create_mlp_with_dropout,
-                               'dropout_rate': 0.5},
+                               'dropout_rate': 0.5,
+                               'weight_decay': 0.5},
                 verbose=1)
+
+    print(model.policy.actor.optimizer)
     model.learn(10_000)

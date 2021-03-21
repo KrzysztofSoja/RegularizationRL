@@ -9,6 +9,8 @@ DDPGPolicy = TD3Policy
 if __name__ == '__main__':
     model = DDPG(MlpPolicy, "Pendulum-v0",
                  policy_kwargs={'create_network_function': create_mlp_with_dropout,
-                                'dropout_rate': 0.5},
+                                'dropout_rate': 0.5,
+                                'weight_decay': 0.5},
                  verbose=1)
+    print(model.policy.actor.optimizer)
     model.learn(10_000)
