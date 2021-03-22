@@ -61,6 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--make_video', default=False, action='store_true')
     parser.add_argument('--dropout', type=float, default=False)
     parser.add_argument('--weight_decay', type=float, default=False)
+    parser.add_argument('--entropy_coefficient', type=float, default=False)
     args = parser.parse_args()
 
     assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
@@ -78,6 +79,9 @@ if __name__ == '__main__':
     if args.weight_decay:
         print(f'Algorithm using weight decay with a value {args.weight_decay}')
 
+    if args.entropy_coefficient:
+        print(f'Algorithm using entropy regularization with coefficient {args.entropy_coefficient}')
+
     path_to_logs = os.path.join(MAIN_DIR, args.algo + '-' + args.env + '-' + str(time.time()).replace('.', ''))
     if not os.path.exists(path_to_logs):
         os.mkdir(path_to_logs)
@@ -89,6 +93,7 @@ if __name__ == '__main__':
         train_env = CyclicMonitor(gym.make(args.env), max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
         eval_env = gym.make(args.env)
 
+    model_kwargs = dict()
     policy_kwargs = dict()
     if args.dropout:
         if args.algo in {'A2C', 'PPO'}:
@@ -101,13 +106,20 @@ if __name__ == '__main__':
     if args.weight_decay:
         policy_kwargs['weight_decay'] = args.weight_decay
 
+    if args.entropy_coefficient:
+        if args.algo in {'A2C', 'PPO'}:
+            model_kwargs['ent_coef'] = args.entropy_coefficient
+        else:
+            raise RuntimeError(f"{args.algo} hasn't entropy regularization")
+
     if args.algo == 'TQC':
         policy_kwargs['n_critics'] = 2
         policy_kwargs['n_quantiles'] = 25
         model = sbc.TQC(TQCMlpPolicy, train_env, top_quantiles_to_drop_per_net=2, verbose=1,
-                        policy_kwargs=policy_kwargs)
+                        policy_kwargs=policy_kwargs, **model_kwargs)
     else:
-        model = sb.__dict__[args.algo](POLICY[args.algo], train_env, policy_kwargs=policy_kwargs, verbose=1)
+        model = sb.__dict__[args.algo](POLICY[args.algo], train_env, policy_kwargs=policy_kwargs, verbose=1,
+                                       **model_kwargs)
     model.learn(total_timesteps=args.steps, callback=NeptuneCallback(model=model,
                                                                      experiment_name=args.env,
                                                                      neptune_account_name='nkrsi',

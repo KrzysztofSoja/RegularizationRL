@@ -1,11 +1,15 @@
 import torch as th
+from torch.nn import functional as F
 
-
+from stable_baselines3.common import logger
 from stable_baselines3 import A2C as BaseA2C
 from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.policies import ActorCriticPolicy as BaseActorCriticPolicy
 from stable_baselines3.common.torch_layers import MlpExtractor
+from stable_baselines3.common.utils import explained_variance
 from typing import Dict, Optional, Type, Union, Any, Callable
+from gym import spaces
+
 
 from common.torch_layers import MlpExtractorWithDropout
 
@@ -104,6 +108,7 @@ if __name__ == '__main__':
     model = A2C(ActorCriticPolicy, "CartPole-v1",
                 policy_kwargs={'mlp_extractor_class': MlpExtractorWithDropout,
                                'mpl_extractor_kwargs': {'dropout_rate': 0.5},
-                               'weight_decay': 0.01},
+                               'weight_decay': 0.001},
+                ent_coef=0.1,
                 verbose=1)
     model.learn(10_000)
