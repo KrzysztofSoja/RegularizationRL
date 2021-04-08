@@ -1,3 +1,5 @@
+import sys
+
 from itertools import product
 
 
@@ -13,7 +15,7 @@ lines = []
 
 n_experiment = 0
 for environment_name, algorithm, dropout, weight_decay in product(ENVIRONMENT_NAMES, ALGORITHMS, DROPOUT, WEIGHT_DECAY):
-    command = f"python main.py --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
+    command = f"{sys.executable} main.py --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
 
     if dropout:
         command += f" --dropout {dropout}"
