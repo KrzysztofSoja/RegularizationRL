@@ -1,7 +1,12 @@
+import sys
+
 from itertools import product
 
 
-ENVIRONMENT_NAMES = ['HalfCheetah-v2'] # , 'Ant-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
+MUJOCO = ['HalfCheetah-v2']  # , 'Ant-v2', 'Walker2d-v2', 'Hopper-v2', 'Humanoid-v2']
+PYBULLET = ['HalfCheetahPyBulletEnv-v0']  #, 'AntPyBulletEnv-v0', 'Walker2DPyBulletEnv-v0', 'HopperPyBulletEnv-v0', 'HumanoidPyBulletEnv-v0']
+
+ENVIRONMENT_NAMES = PYBULLET
 ALGORITHMS = ['PPO', 'A2C'] #'SAC', 'DDPG', 'TD3', 'TQC']
 STEPS = 1_000
 WORKERS = 8
@@ -15,7 +20,7 @@ lines = []
 n_experiment = 0
 for environment_name, algorithm, dropout, weight_decay, entropy_coefficient in \
         product(ENVIRONMENT_NAMES, ALGORITHMS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT):
-    command = f"python main.py --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
+    command = f"{sys.executable} main.py --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
 
     if dropout:
         command += f" --dropout {dropout}"

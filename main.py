@@ -1,5 +1,6 @@
 import os
 import gym
+import pybulletgym
 import time
 import argparse
 import stable_baselines3 as sb
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--entropy_coefficient', type=float, default=False)
     args = parser.parse_args()
 
-    assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
+    # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo in sbc.__dict__, "Algorithm name must be defined in stable_baselines3."
     assert args.dropout is False or .0 < args.dropout < 1, "Dropout value must be from zero to one. "
 
@@ -116,10 +117,10 @@ if __name__ == '__main__':
         policy_kwargs['n_critics'] = 2
         policy_kwargs['n_quantiles'] = 25
         model = sbc.TQC(TQCMlpPolicy, train_env, top_quantiles_to_drop_per_net=2, verbose=1,
-                        policy_kwargs=policy_kwargs, **model_kwargs)
+                        policy_kwargs=policy_kwargs, device='cpu', **model_kwargs)
     else:
         model = sb.__dict__[args.algo](POLICY[args.algo], train_env, policy_kwargs=policy_kwargs, verbose=1,
-                                       **model_kwargs)
+                                       device='cpu', **model_kwargs)
     model.learn(total_timesteps=args.steps, callback=NeptuneCallback(model=model,
                                                                      experiment_name=args.env,
                                                                      neptune_account_name='nkrsi',
