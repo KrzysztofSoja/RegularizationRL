@@ -24,7 +24,7 @@ MAKE_VIDEO = False
 COMMENT = "This is testing run with default params for five different random seed."
 
 
-SLURM = True
+SLURM = False
 NOHUP = False
 PATH_TO_MAIN = os.path.abspath(os.path.join(__file__, os.pardir, 'main.py'))
 
