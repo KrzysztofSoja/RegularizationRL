@@ -4,7 +4,8 @@ import gym
 import numpy as np
 import neptune
 
-from typing import Tuple, Union, NoReturn
+from typing import Tuple, Union, NoReturn, Dict, Optional, Any
+from functools import reduce
 from neptunecontrib.api.video import log_video
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -19,11 +20,14 @@ class NeptuneCallback(BaseCallback):
                  project_name,
                  experiment_name,
                  log_dir,
-                 logs_freq=100,
-                 evaluate_freq=10_000,
-                 verbose=0,
-                 video_length=1000,
-                 make_video=False):
+                 random_seed: Optional[int] = None,
+                 model_parameter: Optional[Dict[str, Any]] = None,
+                 comment: Optional[str] = None,
+                 logs_freq: int = 100,
+                 evaluate_freq: int = 10_000,
+                 verbose: int = 0,
+                 video_length: int = 1000,
+                 make_video: bool = False):
         super(NeptuneCallback, self).__init__(verbose)
         self.model = model
         self.logs_freq = logs_freq
@@ -37,14 +41,33 @@ class NeptuneCallback(BaseCallback):
         self.project_name = project_name
         self.experiment_name = experiment_name
 
+        self.neptune_logger = None
+        if model_parameter is None:
+            self.model_parameter = dict()
+        else:
+            self.model_parameter = model_parameter
+        self.comment = comment
+        self.random_seed = random_seed
+
         self.environment_name = environment_name
 
     def _init_callback(self) -> None:
-        neptune.init(self.neptune_account_name + '/' + self.project_name)
+        self.neptune_logger = neptune.init(self.neptune_account_name + '/' + self.project_name)
         neptune.create_experiment(self.experiment_name)
-        neptune.append_tags(self.model.__class__.__name__, self.environment_name)
+        if self.random_seed is None:
+            neptune.append_tags(self.model.__class__.__name__, self.environment_name)
+        else:
+            neptune.append_tags(self.model.__class__.__name__, self.environment_name, "seed: " + str(self.random_seed))
+
+        try:
+            neptune.log_text("Model Params",
+                reduce(lambda x, y: x + y + "\n", [f"{key}: {value}" for key, value in self.model_parameter.items()]))
+        except:
+            pass
 
         neptune.log_text('Path to local files', self.log_dir)
+        if self.comment is not None:
+            neptune.log_text('Comment', self.comment)
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
 

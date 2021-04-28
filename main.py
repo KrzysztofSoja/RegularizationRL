@@ -63,18 +63,19 @@ if __name__ == '__main__':
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--make_video', default=False, action='store_true')
+    parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--dropout', type=float, default=False)
     parser.add_argument('--weight_decay', type=float, default=False)
     parser.add_argument('--entropy_coefficient', type=float, default=False)
     args = parser.parse_args()
 
-    if args.seed is not None:
-        torch.manual_seed(args.seed)
-        rand.seed(args.seed)
-
     # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo in sbc.__dict__, "Algorithm name must be defined in stable_baselines3."
     assert args.dropout is False or .0 < args.dropout < 1, "Dropout value must be from zero to one. "
+
+    if args.seed is not None:
+        torch.manual_seed(args.seed)
+        rand.seed(args.seed)
 
     if args.algo not in MULTI_ENV and args.workers != 1:
         print('Chosen algorithm don\'t support multi workers environment.')
@@ -128,11 +129,16 @@ if __name__ == '__main__':
     else:
         model = sb.__dict__[args.algo](POLICY[args.algo], train_env, policy_kwargs=policy_kwargs, verbose=1,
                                        device='cpu', **model_kwargs)
+    params_dict = model_kwargs
+    params_dict.update(policy_kwargs)
     model.learn(total_timesteps=args.steps, callback=NeptuneCallback(model=model,
                                                                      experiment_name=args.env,
                                                                      neptune_account_name='nkrsi',
                                                                      project_name='rl-first-run',
                                                                      environment_name=args.env,
                                                                      log_dir=path_to_logs,
-                                                                     make_video=args.make_video))
+                                                                     random_seed=args.seed,
+                                                                     make_video=args.make_video,
+                                                                     model_parameter=params_dict,
+                                                                     comment=args.comment))
     model.save(os.path.join(path_to_logs, 'last_model.plk'))
