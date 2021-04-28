@@ -20,11 +20,15 @@ WEIGHT_DECAY = [False]
 ENTROPY_COEFFICIENT = [False] # , 0.01, 0.05, 0.1, 0.5, 1]
 
 
+
+MAKE_VIDEO = False
+#COMMENT = "This is testing run with default params for five different random seed."
+
+
+
 SLURM = True
-NOHUP = False
-
-
-PATH_TO_MAIN = os.path.abspath(os.path.join(__file__, os.pardir, 'main.py')) 
+NOHUP = True
+PATH_TO_MAIN = os.path.abspath(os.path.join(__file__, os.pardir, 'main.py'))
 
 
 lines = []
@@ -46,10 +50,13 @@ for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficien
     if entropy_coefficient and algorithm in {'A2C', 'PPO'}:
         command += f" --entropy_coefficient {entropy_coefficient}"
 
+    if 'COMMENT' in globals() and COMMENT:
+        command += f' --comment "{COMMENT}"'
+
     if SLURM:
         command = 'srun ' + command
 
-    if n_experiment % 2 == 0 and NOHUP:
+    if n_experiment % 1 == 0 and NOHUP:
         lines.append(f"nohup {command} &\n")
     else:
         lines.append(f"{command}\n")
