@@ -3,6 +3,8 @@ import gym
 import pybulletgym
 import time
 import argparse
+import torch
+import random as rand
 import stable_baselines3 as sb
 import sb3_contrib as sbc
 
@@ -59,11 +61,16 @@ if __name__ == '__main__':
     parser.add_argument('--algo', type=str, required=True)
     parser.add_argument('--steps', type=int, default=1_000_000)
     parser.add_argument('--workers', type=int, default=1)
+    parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--make_video', default=False, action='store_true')
     parser.add_argument('--dropout', type=float, default=False)
     parser.add_argument('--weight_decay', type=float, default=False)
     parser.add_argument('--entropy_coefficient', type=float, default=False)
     args = parser.parse_args()
+
+    if args.seed is not None:
+        torch.manual_seed(args.seed)
+        rand.seed(args.seed)
 
     # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo in sbc.__dict__, "Algorithm name must be defined in stable_baselines3."
