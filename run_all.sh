@@ -1,6 +1,172 @@
-python main.py --env HalfCheetah-v2 --algo PPO --steps 10000 --workers 8 --dropout 0.5
-python main.py --env HalfCheetah-v2 --algo A2C --steps 10000 --workers 8 --dropout 0.5
-python main.py --env HalfCheetah-v2 --algo SAC --steps 10000 --workers 8 --dropout 0.5
-python main.py --env HalfCheetah-v2 --algo DDPG --steps 10000 --workers 8 --dropout 0.5
-python main.py --env HalfCheetah-v2 --algo TD3 --steps 10000 --workers 8 --dropout 0.5
-python main.py --env HalfCheetah-v2 --algo TQC --steps 10000 --workers 8 --dropout 0.5
+#!/bin/bash -l
+## Nazwa zlecenia
+#SBATCH -J BasicRLAlgorithTest
+## Liczba alokowanych węzłów
+#SBATCH -N 10
+## Maksymalny czas trwania zlecenia (format HH:MM:SS)
+#SBATCH --time=12:00:00 
+## Nazwa grantu do rozliczenia zużycia zasobów
+#SBATCH -A plgcontinualrl
+## Specyfikacja partycji
+#SBATCH -p plgrid
+## Plik ze standardowym wyjściem
+#SBATCH --output="output.out"
+## Plik ze standardowym wyjściem błędów
+#SBATCH --error="error.err"
+
+
+## przejscie do katalogu z ktorego wywolany zostal sbatch
+cd $SLURM_SUBMIT_DIR
+
+
+
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HalfCheetahPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env AntPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env Walker2DPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HopperPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo PPO --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo A2C --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo SAC --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo DDPG --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TD3 --steps 2500000 --workers 8 --seed 97531245
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 111
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 12345
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 777
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 56765
+srun /net/people/plgkrzysztofsoj/venv/bin/python /net/people/plgkrzysztofsoj/MujocoRunner/main.py --env HumanoidPyBulletEnv-v0 --algo TQC --steps 2500000 --workers 8 --seed 97531245
