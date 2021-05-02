@@ -43,6 +43,7 @@ class MlpExtractorWithDropout(nn.Module):
                 # TODO: give layer a meaningful name
                 shared_net.append(nn.Linear(last_layer_dim_shared, layer_size))
                 shared_net.append(activation_fn())
+                shared_net.append(nn.Dropout(p=dropout_rate))                          # ToDo: Dodać parametryzacje
                 last_layer_dim_shared = layer_size
             else:
                 assert isinstance(layer, dict), "Error: the net_arch list can only contain ints and dicts"
@@ -130,3 +131,7 @@ def create_mlp_with_dropout(
     if squash_output:
         modules.append(nn.Tanh())
     return modules
+
+
+class MlpExtractorWithManifoldMixup(nn.Module):
+    pass

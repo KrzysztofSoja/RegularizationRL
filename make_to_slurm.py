@@ -16,8 +16,7 @@ def make_slurm_prefix(expeirment_name: str,
                       output_file: str = 'output.out',
                       error_file: str = 'error.err'):
     return \
-f"""
-#!/bin/bash -l
+f"""#!/bin/bash -l
 ## Nazwa zlecenia
 #SBATCH -J {expeirment_name}
 ## Liczba alokowanych węzłów
