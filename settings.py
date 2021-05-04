@@ -50,5 +50,5 @@ EXECUTABLE = 'python3'# sys.executable
 EXPERIMENT_NAME = "BasicRLConfiguration"
 N_NODES = 1
 HOURS = "12"
-SINGULARITY_COMMAND = F"singularity {PATH_TO_CONTAINER} exec "
+SINGULARITY_COMMAND = F"singularity exec {PATH_TO_CONTAINER} "
 
