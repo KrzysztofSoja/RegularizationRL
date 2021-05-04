@@ -4,12 +4,24 @@ import gym
 import numpy as np
 import neptune
 
-from typing import Tuple, Union, NoReturn, Dict, Optional, Any
-from functools import reduce
+from typing import Tuple, Union, NoReturn, Dict, Optional, Any, List
 from neptunecontrib.api.video import log_video
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecVideoRecorder, DummyVecEnv
+from stable_baselines3.common import logger
+
+
+def save_in_csv(path_to_file: str, logs: Dict[Any, Any]):
+    if os.path.isfile(path_to_file):
+        with open(path_to_file, 'a', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=logs.keys())
+            writer.writerow(logs)
+    else:
+        with open(path_to_file, 'w', newline='') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=logs.keys())
+            writer.writeheader()
+            writer.writerow(logs)
 
 
 class NeptuneCallback(BaseCallback):
@@ -23,51 +35,40 @@ class NeptuneCallback(BaseCallback):
                  random_seed: Optional[int] = None,
                  model_parameter: Optional[Dict[str, Any]] = None,
                  comment: Optional[str] = None,
-                 logs_freq: int = 100,
                  evaluate_freq: int = 10_000,
+                 evaluate_length: int = 5,
                  verbose: int = 0,
                  video_length: int = 1000,
-                 make_video: bool = False):
+                 make_video_freq: int = 0,
+                 tags: Optional[List[str]] = None):
         super(NeptuneCallback, self).__init__(verbose)
         self.model = model
-        self.logs_freq = logs_freq
         self.evaluate_freq = evaluate_freq
         self.log_dir = log_dir
         self.best_mean_reward = -np.inf
         self.video_length = video_length
-        self.make_video = make_video
+        self.make_video_freq = make_video_freq
 
         self.neptune_account_name = neptune_account_name
         self.project_name = project_name
         self.experiment_name = experiment_name
 
-        self.neptune_logger = None
-        if model_parameter is None:
-            self.model_parameter = dict()
-        else:
-            self.model_parameter = model_parameter
-        self.comment = comment
+        self.tags = [] if tags is None else tags
+        self.evaluate_length = evaluate_length
+        self.model_parameter = dict() if model_parameter is None else model_parameter
+        self.comment = "" if comment is None else comment
         self.random_seed = random_seed
 
         self.environment_name = environment_name
 
     def _init_callback(self) -> None:
-        self.neptune_logger = neptune.init(self.neptune_account_name + '/' + self.project_name)
-        neptune.create_experiment(self.experiment_name)
-        if self.random_seed is None:
-            neptune.append_tags(self.model.__class__.__name__, self.environment_name)
-        else:
-            neptune.append_tags(self.model.__class__.__name__, self.environment_name, "seed: " + str(self.random_seed))
-
-        try:
-            neptune.log_text("Model Params",
-                reduce(lambda x, y: x + y + "\n", [f"{key}: {value}" for key, value in self.model_parameter.items()]))
-        except:
-            pass
+        neptune.init(self.neptune_account_name + '/' + self.project_name)
+        neptune.create_experiment(self.experiment_name,
+                                  params=self.model_parameter,
+                                  description=self.comment)
+        neptune.append_tags(self.model.__class__.__name__, self.environment_name, *self.tags)
 
         neptune.log_text('Path to local files', self.log_dir)
-        if self.comment is not None:
-            neptune.log_text('Comment', self.comment)
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
 
@@ -77,7 +78,7 @@ class NeptuneCallback(BaseCallback):
 
         for file_or_dir in os.listdir(self.log_dir):
             file_or_dir = os.path.join(self.log_dir, file_or_dir)
-            if os.path.isfile(file_or_dir) and file_or_dir[-len('.csv'):] == '.csv':
+            if os.path.isfile(file_or_dir) and file_or_dir[-len('.monitor.csv'):] == '.monitor.csv':
                 with open(file_or_dir, 'r') as csv_file:
                     reader = csv.DictReader(csv_file)
 
@@ -126,7 +127,7 @@ class NeptuneCallback(BaseCallback):
         episode_rewards, episode_lengths = evaluate_policy(
             self.model,
             validate_environment,
-            n_eval_episodes=5,
+            n_eval_episodes=self.evaluate_length,
             render=False,
             deterministic=True,
             return_episode_rewards=True,
@@ -137,30 +138,48 @@ class NeptuneCallback(BaseCallback):
         return mean_reward, std_reward, mean_ep_length, std_ep_length
 
     def _on_step(self) -> bool:
-        if self.n_calls % self.logs_freq == 0:
-            logs = self._load_logs()
-            if logs is None:
-                return True
-            else:
-                mean_reward, std_reward, mean_length, std_length = logs
 
-            neptune.log_metric('mean reward from training', mean_reward)
-            neptune.log_metric('std reward from training', std_reward)
-            neptune.log_metric('mean length from training', mean_length)
-            neptune.log_metric('std length from training', std_length)
+        basic_logs = self._load_logs()
+        if basic_logs is None:
+            return True
+        else:
+            basic_logs = {'train/mean_reward': basic_logs[0], 'train/std_reward': basic_logs[1],
+                          'train/mean_episode_length': basic_logs[2], 'train/std_episode_length': basic_logs[3]}
+
+        for metric_name, metric_value in basic_logs.items():
+            neptune.log_metric(metric_name, metric_value)
+
+        for metric_name, metric_value in logger.get_log_dict().items():
+            neptune.log_metric(metric_name, metric_value)
+        save_in_csv(os.path.join(self.log_dir, 'training.csv'), {**logger.get_log_dict(), **basic_logs})
 
         if self.n_calls % self.evaluate_freq == 0:
             mean_reward, std_reward, mean_ep_length, std_ep_length = self._evaluate()
-            if self.make_video:
-                self._make_video()
+            evaluate_logs = {'evaluate/mean_reward': mean_reward,
+                             'evaluate/std_reward': std_reward,
+                             'evaluate/mean_episode_length': mean_ep_length,
+                             'evaluate/std_episode_length': std_ep_length}
 
-            neptune.log_metric('mean reward from evaluate', mean_reward)
-            neptune.log_metric('std_reward from evaluate', std_reward)
-            neptune.log_metric('mean episode length from evaluate', mean_ep_length)
-            neptune.log_metric('std episode length from evaluate', std_ep_length)
+            for metric_name, metric_value in evaluate_logs.items():
+                neptune.log_metric(metric_name, metric_value)
+            save_in_csv(os.path.join(self.log_dir, 'evaluating.csv'), evaluate_logs)
 
             if mean_reward > self.best_mean_reward:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.log_dir, "best_model.plk"))
 
+        if self.n_calls % self.make_video_freq == 0:
+            self._make_video()
+
         return True
+
+    def __del__(self):
+        try:
+            neptune.stop()
+        except neptune.exceptions.NeptuneNoExperimentContextException:
+            pass
+
+        for file_or_dir in os.listdir(self.log_dir):
+            file_or_dir = os.path.join(self.log_dir, file_or_dir)
+            if os.path.isfile(file_or_dir) and file_or_dir[-len('.monitor.csv'):] == '.monitor.csv':
+                os.remove(file_or_dir)
