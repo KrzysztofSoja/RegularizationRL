@@ -1,15 +1,21 @@
 import gym
+import numpy as np
 import torch as th
 from torch import nn
+from torch.nn import functional as F
 
-from stable_baselines3 import TD3
+from stable_baselines3.common import logger
+from stable_baselines3 import TD3 as BaseTD3
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.preprocessing import get_action_dim
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor, FlattenExtractor, create_mlp
 from stable_baselines3.td3.policies import TD3Policy as BaseTD3Policy
+from stable_baselines3.common.utils import polyak_update
+from stable_baselines3.td3.policies import TD3Policy
+
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
-from common.policies import ContinuousCritic
+from common.policies import ContinuousCriticWithManifoldMixup, ContinuousCriticWithDropout
 from common.torch_layers import create_mlp_with_dropout
 
 
@@ -33,7 +39,7 @@ class Actor(BasePolicy):
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         net_arch: List[int],
-        features_extractor: nn.Module,
+        features_extractor: BaseFeaturesExtractor,
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
         create_network: callable = create_mlp,
@@ -117,6 +123,8 @@ class TD3Policy(BaseTD3Policy):
         activation_fn: Type[nn.Module] = nn.ReLU,
         dropout_rate: Optional[float] = None,
         weight_decay: Optional[float] = 0.0,
+        manifold_mixup_alpha: Optional[float] = 0.0,
+        last_layer_mixup: Optional[int] = 1,
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         normalize_images: bool = True,
@@ -126,6 +134,8 @@ class TD3Policy(BaseTD3Policy):
         n_critics: int = 2,
         share_features_extractor: bool = True,
     ):
+        assert not (dropout_rate is not None and dropout_rate > 0 and manifold_mixup_alpha > 0), 'Not implemented.'
+
         if weight_decay != 0.0:
             if optimizer_kwargs is None:
                 optimizer_kwargs = dict()
@@ -135,6 +145,8 @@ class TD3Policy(BaseTD3Policy):
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+        self.manifold_mixup_alpha = manifold_mixup_alpha
+        self.last_layer_mixup = last_layer_mixup
 
         super(TD3Policy, self).__init__(
             observation_space,
@@ -158,12 +170,89 @@ class TD3Policy(BaseTD3Policy):
 
         return Actor(create_network=self.create_network_function, **actor_kwargs).to(self.device)
 
-    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> ContinuousCritic:
+    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Any:
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
             critic_kwargs['dropout_rate'] = self.dropout_rate
-        return ContinuousCritic(create_network=self.create_network_function, **critic_kwargs).to(self.device)
+            return ContinuousCriticWithDropout(create_network=self.create_network_function, **critic_kwargs).to(self.device)
+        elif self.manifold_mixup_alpha > 0:
+            critic_kwargs['alpha'] = self.manifold_mixup_alpha
+            critic_kwargs['last_layer_mixup'] = self.last_layer_mixup
+            return ContinuousCriticWithManifoldMixup(**critic_kwargs).to(
+                self.device)
+        else:
+            return super(TD3Policy, self).make_critic(features_extractor)
 
+
+class TD3(BaseTD3):
+
+    def train(self, gradient_steps: int, batch_size: int = 100) -> None:
+
+        # Update learning rate according to lr schedule
+        self._update_learning_rate([self.actor.optimizer, self.critic.optimizer])
+
+        actor_losses, critic_losses = [], []
+
+        for gradient_step in range(gradient_steps):
+
+            self._n_updates += 1
+            # Sample replay buffer
+            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+
+            with th.no_grad():
+                # Select action according to policy and add clipped noise
+                noise = replay_data.actions.clone().data.normal_(0, self.target_policy_noise)
+                noise = noise.clamp(-self.target_noise_clip, self.target_noise_clip)
+                next_actions = (self.actor_target(replay_data.next_observations) + noise).clamp(-1, 1)
+
+                # Compute the next Q-values: min over all critics targets
+                next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
+                next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
+                target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values   # ToDo: Target_Q_values
+
+            if isinstance(self.critic, ContinuousCriticWithManifoldMixup):
+                # Get current Q-values estimates for each critic network
+                current_q_values_and_new_targets = self.critic(replay_data.observations, replay_data.actions,
+                                                               target_q_values)
+                # Compute critic loss with new targets
+                critic_loss = sum([F.mse_loss(current_q, new_target) for current_q, new_target in
+                                   current_q_values_and_new_targets])
+            else:
+                current_q_values = self.critic(replay_data.observations, replay_data.actions)
+                 # Compute critic loss
+                critic_loss = sum([F.mse_loss(current_q, target_q_values) for current_q in current_q_values])
+
+            critic_losses.append(critic_loss.item())
+
+            # Optimize the critics
+            self.critic.optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic.optimizer.step()
+
+            # Delayed policy updates
+            if self._n_updates % self.policy_delay == 0:
+                # Compute actor loss
+                actor_loss = -self.critic.q1_forward(replay_data.observations, self.actor(replay_data.observations)).mean()
+                actor_losses.append(actor_loss.item())
+
+                # Optimize the actor
+                self.actor.optimizer.zero_grad()
+                actor_loss.backward()
+                self.actor.optimizer.step()
+
+                polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
+                polyak_update(self.actor.parameters(), self.actor_target.parameters(), self.tau)
+
+        logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        if len(actor_losses) > 0:
+            temp_actor_losses = np.mean(actor_losses)
+            logger.record("train/actor_loss", temp_actor_losses)
+            if np.isinf(temp_actor_losses) or np.isnan(temp_actor_losses):
+                raise Exception('Gradient KABUM! actor_loss.')
+        temp_critic_losses = np.mean(critic_losses)
+        logger.record("train/critic_loss", temp_critic_losses)
+        if np.isinf(temp_critic_losses) or np.isnan(temp_critic_losses):
+            raise Exception('Gradient KABUM! critic_losses.')
 
 
 MlpPolicy = TD3Policy
@@ -172,7 +261,7 @@ MlpPolicy = TD3Policy
 if __name__ == '__main__':
     model = TD3(TD3Policy, "Pendulum-v0",
                 policy_kwargs={'create_network_function': create_mlp_with_dropout,
-                               'dropout_rate': 0.5,
+                               'dropout_rate': 0.1,
                                'weight_decay': 0.5},
                 verbose=1)
 
