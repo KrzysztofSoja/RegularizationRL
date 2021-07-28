@@ -13,7 +13,7 @@ for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficien
         product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT):
     command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
 
-    if 'SEED' in globals() and seed:
+    if 'SEEDS' in globals() and seed:
         command += f" --seed {seed}"
 
     if dropout:

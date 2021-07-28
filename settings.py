@@ -20,14 +20,14 @@ PYBULLET = ['HalfCheetahPyBulletEnv-v0', ]
            # 'Walker2DPyBulletEnv-v0',
            # 'HopperPyBulletEnv-v0',
            # 'HumanoidPyBulletEnv-v0']
-ENVIRONMENT_NAMES = PYBULLET
+ENVIRONMENT_NAMES = MUJOCO
 
 
 # Algorithms settings
 
 ALGORITHMS = ['PPO', 'A2C', 'SAC', 'TQC', 'DDPG', 'TD3']
-SEEDS = [111]  #, 12345, 777, 56765, 97531245]
-STEPS = 10_000 #2_500_000
+SEEDS = [111, 12345, 777, 56765, 97531245]
+STEPS = 2_500_000
 WORKERS = 8
 
 
@@ -37,7 +37,7 @@ USE_SDE = False
 
 # Regularizers settings
 
-DROPOUT = [False]  # flout number from 0 to 1 or False
+DROPOUT = [0.2, 0.3, 0.4, 0.5]
 WEIGHT_DECAY = [False]
 ENTROPY_COEFFICIENT = [False]  # , 0.01, 0.05, 0.1, 0.5, 1]
 
@@ -45,16 +45,16 @@ ENTROPY_COEFFICIENT = [False]  # , 0.01, 0.05, 0.1, 0.5, 1]
 # Logs settings
 
 USE_NEPTUNE = True
-MAKE_VIDEO_FREQ = 2_000#1_000_000
-VALIDATION_FREQ = 1000
-VALIDATION_LENGTH = 1
-#COMMENT = "This is testing run with default params for five different random seed."
+MAKE_VIDEO_FREQ = 100_000
+VALIDATION_FREQ = 10_000
+VALIDATION_LENGTH = 100
+COMMENT = "Using gSDE in basing algorithm."
 
 
 # Experiments settings
 
-EXECUTABLE = 'python'# sys.executable
-EXPERIMENT_NAME = "BasicRLConfiguration"
+EXECUTABLE = 'python3'# sys.executable
+EXPERIMENT_NAME = "gSDE"
 N_NODES = 1
 HOURS = "12"
 SINGULARITY_COMMAND = F"singularity exec {PATH_TO_CONTAINER} "
