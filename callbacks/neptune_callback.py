@@ -35,6 +35,7 @@ class NeptuneCallback(BaseCallback):
                  random_seed: Optional[int] = None,
                  model_parameter: Optional[Dict[str, Any]] = None,
                  comment: Optional[str] = None,
+                 log_freq: int = 100,
                  evaluate_freq: int = 10_000,
                  evaluate_length: int = 5,
                  verbose: int = 0,
@@ -43,6 +44,7 @@ class NeptuneCallback(BaseCallback):
                  tags: Optional[List[str]] = None):
         super(NeptuneCallback, self).__init__(verbose)
         self.model = model
+        self.log_freq = log_freq
         self.evaluate_freq = evaluate_freq
         self.log_dir = log_dir
         self.best_mean_reward = -np.inf
@@ -139,19 +141,21 @@ class NeptuneCallback(BaseCallback):
 
     def _on_step(self) -> bool:
 
-        basic_logs = self._load_logs()
-        if basic_logs is None:
-            return True
-        else:
-            basic_logs = {'train/mean_reward': basic_logs[0], 'train/std_reward': basic_logs[1],
-                          'train/mean_episode_length': basic_logs[2], 'train/std_episode_length': basic_logs[3]}
+        if self.n_calls % self.log_freq == 0:
+            basic_logs = self._load_logs()
+            if basic_logs is None:
+                return True
+            else:
+                basic_logs = {'train/mean_reward': basic_logs[0], 'train/std_reward': basic_logs[1],
+                              'train/mean_episode_length': basic_logs[2], 'train/std_episode_length': basic_logs[3]}
 
-        for metric_name, metric_value in basic_logs.items():
-            neptune.log_metric(metric_name, metric_value)
+            for metric_name, metric_value in basic_logs.items():
+                neptune.log_metric(metric_name, metric_value)
 
-        for metric_name, metric_value in logger.get_log_dict().items():
-            neptune.log_metric(metric_name, metric_value)
-        save_in_csv(os.path.join(self.log_dir, 'training.csv'), {**logger.get_log_dict(), **basic_logs})
+            for metric_name, metric_value in logger.get_log_dict().items():
+                neptune.log_metric(metric_name, metric_value)
+            neptune.log_metric("train/calls_to_step", self.n_calls)
+            save_in_csv(os.path.join(self.log_dir, 'training.csv'), {**logger.get_log_dict(), **basic_logs})
 
         if self.n_calls % self.evaluate_freq == 0:
             mean_reward, std_reward, mean_ep_length, std_ep_length = self._evaluate()
@@ -162,13 +166,14 @@ class NeptuneCallback(BaseCallback):
 
             for metric_name, metric_value in evaluate_logs.items():
                 neptune.log_metric(metric_name, metric_value)
+            neptune.log_metric("evaluate/calls_to_step", self.n_calls)
             save_in_csv(os.path.join(self.log_dir, 'evaluating.csv'), evaluate_logs)
 
             if mean_reward > self.best_mean_reward:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.log_dir, "best_model.plk"))
 
-        if self.n_calls % self.make_video_freq == 0:
+        if self.make_video_freq != 0 and self.n_calls % self.make_video_freq == 0:
             self._make_video()
 
         return True

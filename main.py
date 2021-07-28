@@ -21,7 +21,7 @@ from modificated_sb3.ddpg import MlpPolicy as DDPGMlpPolicy
 from modificated_sb3.td3 import MlpPolicy as TD3MlpPolicy
 from modificated_sb3.tqc import MlpPolicy as TQCMlpPolicy
 
-from common.torch_layers import create_mlp_with_dropout, MlpExtractorWithDropout
+from common.torch_layers import create_mlp_with_dropout, MlpExtractorWithDropout, MlpExtractorWithManifoldMixup
 
 
 POLICY = {'PPO': PPOMlpPolicy, 'A2C': A2CMlpPolicy, 'SAC': SACMlpPolicy, 'DDPG': DDPGMlpPolicy, 'TD3': TD3MlpPolicy,
@@ -66,6 +66,7 @@ def create_tags_list(args):
             tags.append(f"{key}: {value}")
     return tags
 
+
 def create_addition_params(args):
     parameters = {}
     parameters['steps'] = args.steps
@@ -75,6 +76,7 @@ def create_addition_params(args):
     parameters['validation_freq'] = args.validation_freq
     parameters['validation_length'] = args.validation_length
     return parameters
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -97,6 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=False)
     parser.add_argument('--weight_decay', type=float, default=False)
     parser.add_argument('--entropy_coefficient', type=float, default=False)
+    parser.add_argument('--manifold_mixup_alpha', type=float, default=False)
     parser.add_argument('--use_sde', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -104,6 +107,9 @@ if __name__ == '__main__':
     # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo, "Algorithm name must be defined in stable_baselines3."
     assert args.dropout is False or .0 < args.dropout < 1, "Dropout value must be from zero to one. "
+    assert args.manifold_mixup_alpha is False or args.manifold_mixup_alpha >= 0.0, \
+        "Manifold mixup alpha must be positive real number."
+    assert not (args.dropout and args.manifold_mixup_alpha), "Not implemented."
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -122,6 +128,9 @@ if __name__ == '__main__':
 
     if args.entropy_coefficient:
         print(f'Algorithm using entropy regularization with coefficient {args.entropy_coefficient}')
+
+    if args.manifold_mixup_alpha:
+        print(f"Algorithm use manifold mixup regularization with alpha parameter {args.manifold_mixup_alpha}")
 
     path_to_logs = os.path.join(MAIN_DIR, args.algo + '-' + args.env + '-' + str(time.time()).replace('.', ''))
     if not os.path.exists(path_to_logs):
@@ -157,6 +166,15 @@ if __name__ == '__main__':
         else:
             raise RuntimeError(f"{args.algo} hasn't entropy regularization")
 
+    if args.manifold_mixup_alpha:
+        if args.algo in {'A2C', 'PPO'}:
+            policy_kwargs['mlp_extractor_class'] = MlpExtractorWithManifoldMixup
+            policy_kwargs['mpl_extractor_kwargs'] = {'alpha': args.manifold_mixup_alpha, 'last_layer_mixup': 1}
+        elif args.algo == 'TQC':
+            raise RuntimeError(f"{args.algo} hasn't manifold mixup regularization")
+        else:
+            policy_kwargs['manifold_mixup_alpha'] = args.manifold_mixup_alpha
+
     if args.algo == 'TQC':
         policy_kwargs['n_critics'] = 2
         policy_kwargs['n_quantiles'] = 25
@@ -172,7 +190,7 @@ if __name__ == '__main__':
     if args.use_neptune:
         callback_manager = NeptuneCallback(model=model, experiment_name=args.env, neptune_account_name='nkrsi',
                                            project_name='rl-first-run', environment_name=args.env, log_dir=path_to_logs,
-                                           random_seed=args.seed, evaluate_freq=args.validation_freq,
+                                           random_seed=args.seed, log_freq=100, evaluate_freq=args.validation_freq,
                                            make_video_freq=args.make_video_freq, evaluate_length=args.validation_length,
                                            model_parameter={**model_kwargs, **policy_kwargs, **create_addition_params(args)},
                                            comment=args.comment,
