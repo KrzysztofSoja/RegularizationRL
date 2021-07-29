@@ -86,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--algo', type=str, required=True)
     parser.add_argument('--steps', type=int, default=1_000_000)
     parser.add_argument('--workers', type=int, default=1)
-    parser.add_argument('--seed', type=int, default=None)
+    parser.add_argument('--seed', type=int, default=0)
 
     # Logger parameters
     parser.add_argument('--make_video_freq', type=int, default=0)
@@ -137,11 +137,16 @@ if __name__ == '__main__':
         os.mkdir(path_to_logs)
 
     if args.algo in MULTI_ENV:
-        train_env = DummyVecEnv([_make_env(args.env, i, path_to_logs) for i in range(args.workers)])
+        train_env = DummyVecEnv([_make_env(args.env, i, path_to_logs, seed=args.seed) for i in range(args.workers)])
         eval_env = gym.make(args.env)
+        eval_env.seed(args.seed)
     else:
-        train_env = CyclicMonitor(gym.make(args.env), max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
+        env = gym.make(args.env)
+        env.seed(args.seed)
+        train_env = CyclicMonitor(env, max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
         eval_env = gym.make(args.env)
+        eval_env.seed(args.seed)
+        set_random_seed(args.seed)
 
     model_kwargs = dict()
     policy_kwargs = dict()
