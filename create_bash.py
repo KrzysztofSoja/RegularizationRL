@@ -8,9 +8,12 @@ PATH_TO_MAIN = os.path.abspath(os.path.join(__file__, os.pardir, 'main.py'))
 
 lines = []
 
+
 n_experiment = 0
-for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficient, manifold_mixup_alpha in \
-        product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT, MANIFOLD_MIXUP_ALPHA):
+for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficient, manifold_mixup_alpha, \
+        gradient_penalty_actor, gradient_penalty_actor_k, gradient_penalty_critic, gradient_penalty_critic_k in \
+        product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT, MANIFOLD_MIXUP_ALPHA,
+                GRADIENT_PENALTY_ACTOR, GRADIENT_PENALTY_ACTOR_K, GRADIENT_PENALTY_CRITIC, GRADIENT_PENALTY_CRITIC_K):
     command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
 
     if 'SEEDS' in globals() and seed:
@@ -27,6 +30,14 @@ for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficien
 
     if manifold_mixup_alpha > 0:
         command += f" --manifold_mixup_alpha {manifold_mixup_alpha}"
+
+    if gradient_penalty_actor > 0:
+        command += f" --gradient_penalty_actor {gradient_penalty_actor}"
+        command += f" --gradient_penalty_actor_k {gradient_penalty_actor_k}"
+
+    if gradient_penalty_critic > 0:
+        command += f" --gradient_penalty_critic {gradient_penalty_critic}"
+        command += f" --gradient_penalty_critic_k {gradient_penalty_critic_k}"
 
     if algorithm in {'PPO', 'A2C', 'SAC', 'TQC'} and USE_SDE:
         command += ' --use_sde'
@@ -45,6 +56,9 @@ for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficien
 
     if 'VALIDATION_LENGTH' in globals() and VALIDATION_LENGTH:
         command += f' --validation_length {VALIDATION_LENGTH}'
+
+    if 'TAG' in globals() and TAG:
+        command += f' --additional_tag {TAG}'
 
     lines.append(command + '\n')
 

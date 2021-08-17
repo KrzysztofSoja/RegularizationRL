@@ -12,9 +12,8 @@ from stable_baselines3.common.utils import explained_variance
 
 from typing import Dict, Optional, Type, Union, Any, Callable, Tuple
 
-
 from common.torch_layers import MlpExtractorWithDropout, MlpExtractorWithManifoldMixup
-
+from common.gradient_penalty import gradient_penalty_actor_critic
 
 __all__ = ['A2C', 'ActorCriticPolicy', 'MlpPolicy']
 
@@ -100,28 +99,32 @@ class ActorCriticPolicy(BaseActorCriticPolicy):
 class A2C(BaseA2C):
 
     def __init__(
-        self,
-        policy: Union[str, Type[ActorCriticPolicy]],
-        env: Union[GymEnv, str],
-        learning_rate: Union[float, Callable] = 7e-4,
-        n_steps: int = 5,
-        gamma: float = 0.99,
-        gae_lambda: float = 1.0,
-        ent_coef: float = 0.0,
-        vf_coef: float = 0.5,
-        max_grad_norm: float = 0.5,
-        rms_prop_eps: float = 1e-5,
-        use_rms_prop: bool = True,
-        use_sde: bool = False,
-        sde_sample_freq: int = -1,
-        normalize_advantage: bool = False,
-        tensorboard_log: Optional[str] = None,
-        create_eval_env: bool = False,
-        policy_kwargs: Optional[Dict[str, Any]] = None,
-        verbose: int = 0,
-        seed: Optional[int] = None,
-        device: Union[th.device, str] = "auto",
-        _init_setup_model: bool = True,
+            self,
+            policy: Union[str, Type[ActorCriticPolicy]],
+            env: Union[GymEnv, str],
+            learning_rate: Union[float, Callable] = 7e-4,
+            n_steps: int = 5,
+            gamma: float = 0.99,
+            gae_lambda: float = 1.0,
+            ent_coef: float = 0.0,
+            vf_coef: float = 0.5,
+            max_grad_norm: float = 0.5,
+            rms_prop_eps: float = 1e-5,
+            use_rms_prop: bool = True,
+            use_sde: bool = False,
+            actor_gradient_penalty: float = 0.0,
+            critic_gradient_penalty: float = 0.0,
+            actor_gradient_penalty_k: float = 1.0,
+            critic_gradient_penalty_k: float = 1.0,
+            sde_sample_freq: int = -1,
+            normalize_advantage: bool = False,
+            tensorboard_log: Optional[str] = None,
+            create_eval_env: bool = False,
+            policy_kwargs: Optional[Dict[str, Any]] = None,
+            verbose: int = 0,
+            seed: Optional[int] = None,
+            device: Union[th.device, str] = "auto",
+            _init_setup_model: bool = True,
     ):
 
         super(A2C, self).__init__(
@@ -145,6 +148,11 @@ class A2C(BaseA2C):
             _init_setup_model=False,
         )
 
+        self.actor_gradient_penalty = actor_gradient_penalty
+        self.critic_gradient_penalty = critic_gradient_penalty
+        self.actor_gradient_penalty_k = actor_gradient_penalty_k
+        self.critic_gradient_penalty_k = critic_gradient_penalty_k
+
         self.normalize_advantage = normalize_advantage
 
         # Update optimizer inside the policy if we want to use RMSProp
@@ -154,7 +162,6 @@ class A2C(BaseA2C):
             self.policy_kwargs["optimizer_kwargs"] = dict(alpha=0.99, eps=rms_prop_eps)
 
         if 'weight_decay' in self.policy_kwargs.keys():
-
             # This line overwrite optimizer kwargs from inherited class.
             self.policy_kwargs["optimizer_kwargs"]["weight_decay"] = policy_kwargs['weight_decay']
             del policy_kwargs['weight_decay']
@@ -205,7 +212,17 @@ class A2C(BaseA2C):
             else:
                 entropy_loss = -th.mean(entropy)
 
-            loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+            if self.actor_gradient_penalty > 0 or self.critic_gradient_penalty > 0:
+                gradients_critic, gradients_actor = gradient_penalty_actor_critic(self.policy,
+                                                                                  rollout_data.observations,
+                                                                                  k_for_actor=self.actor_gradient_penalty_k,
+                                                                                  k_for_critic=self.critic_gradient_penalty_k)
+                gradients_critic *= self.critic_gradient_penalty
+                gradients_actor *= self.actor_gradient_penalty
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + gradients_critic \
+                       + gradients_actor
+            else:
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
             # Optimization step
             self.policy.optimizer.zero_grad()
@@ -223,15 +240,20 @@ class A2C(BaseA2C):
         logger.record("train/entropy_loss", entropy_loss.item())
         logger.record("train/policy_loss", policy_loss.item())
         logger.record("train/value_loss", value_loss.item())
+
+        if self.critic_gradient_penalty > 0:
+            logger.record("train/gradient_penalty_critic", gradients_critic.item())
+        if self.actor_gradient_penalty > 0:
+            logger.record("train/graident_penalty_actor", gradients_actor.item())
         if hasattr(self.policy, "log_std"):
             logger.record("train/std", th.exp(self.policy.log_std).mean().item())
 
         if np.isinf(entropy_loss.item()) or np.isnan(entropy_loss.item()):
-            raise Exception('Gradient KABUM! Entropy loss.')
+            raise Exception('Gradient of entropy loss KABUM!')
         if np.isinf(policy_loss.item()) or np.isnan(policy_loss.item()):
-            raise Exception('Gradient KABUM! Policy loss.')
+            raise Exception('Gradient of policy loss KABUM!')
         if np.isinf(value_loss.item()) or np.isnan(value_loss.item()):
-            raise Exception('Gradient KABUM! Value loss.')
+            raise Exception('Gradient of value loss KABUM!')
 
 
 MlpPolicy = ActorCriticPolicy
