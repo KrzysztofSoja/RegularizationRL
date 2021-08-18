@@ -108,6 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('--gradient_penalty_critic_k', type=float, default=0)
 
     parser.add_argument('--use_sde', default=False, action='store_true')
+    parser.add_argument('--device', default='cpu', type=str)
 
     args = parser.parse_args()
 
@@ -209,7 +210,7 @@ if __name__ == '__main__':
                                        critic_gradient_penalty=args.gradient_penalty_critic,
                                        actor_gradient_penalty_k=args.gradient_penalty_actor_k,
                                        critic_gradient_penalty_k=args.gradient_penalty_critic_k,
-                                       device='cpu', **model_kwargs)
+                                       device=args.device, **model_kwargs)
 
     if args.use_neptune:
         callback_manager = NeptuneCallback(model=model, experiment_name=args.env, neptune_account_name='nkrsi',
