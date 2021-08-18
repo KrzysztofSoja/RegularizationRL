@@ -10,7 +10,12 @@ PATH_TO_SBATCH_COLLECTIVE = os.path.abspath(os.path.join(__file__, os.pardir, 's
 
 # Environment settings
 
-MUJOCO = ["InvertedDoublePendulum-v2"]
+MUJOCO = ['HalfCheetah-v2',
+          'Ant-v2',
+          'Walker2d-v2',
+          'Hopper-v2',
+          'Humanoid-v2']
+       # ["InvertedDoublePendulum-v2", "InvertedPendulum-v2"]
        # ['HalfCheetah-v2',
        #   'Ant-v2',
        #   'Walker2d-v2',

@@ -2,6 +2,7 @@ from itertools import product
 
 from settings import *
 
+from steps import get_steps, is_defined
 
 PATH_TO_MAIN = os.path.abspath(os.path.join(__file__, os.pardir, 'main.py'))
 
@@ -14,7 +15,11 @@ for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficien
         gradient_penalty_actor, gradient_penalty_actor_k, gradient_penalty_critic, gradient_penalty_critic_k in \
         product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT, MANIFOLD_MIXUP_ALPHA,
                 GRADIENT_PENALTY_ACTOR, GRADIENT_PENALTY_ACTOR_K, GRADIENT_PENALTY_CRITIC, GRADIENT_PENALTY_CRITIC_K):
-    command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
+
+    if not is_defined(algorithm, environment_name):
+        continue
+
+    command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {get_steps(algorithm, environment_name)} --workers {WORKERS}"
 
     if 'SEEDS' in globals() and seed:
         command += f" --seed {seed}"
