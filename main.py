@@ -121,6 +121,8 @@ if __name__ == '__main__':
     assert 0 <= args.dropout_rate_actor < 1, "Dropout value must be from zero to one. "
     assert args.manifold_mixup_alpha is False or args.manifold_mixup_alpha >= 0.0, \
         "Manifold mixup alpha must be positive real number."
+    assert not (args.dropout_rate_critic > 0 and args.manifold_mixup_alpha), "Not implemented."
+    assert not (args.dropout_rate_actor > 0 and args.manifold_mixup_alpha), "Not implemented."
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
