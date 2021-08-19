@@ -45,7 +45,10 @@ class MlpExtractorWithDropout(nn.Module):
         net_arch: List[Union[int, Dict[str, List[int]]]],
         activation_fn: Type[nn.Module],
         device: Union[th.device, str] = "auto",
-        dropout_rate: float = 0.5
+        dropout_rate_actor: float = 0.5,
+        dropout_rate_critic: float = 0.5,
+        dropout_rate_shared: float = 0,
+        dropout_only_on_last_layer: bool = True
     ):
         super(MlpExtractorWithDropout, self).__init__()
         device = get_device(device)
@@ -61,7 +64,8 @@ class MlpExtractorWithDropout(nn.Module):
                 # TODO: give layer a meaningful name
                 shared_net.append(nn.Linear(last_layer_dim_shared, layer_size))
                 shared_net.append(activation_fn())
-                shared_net.append(nn.Dropout(p=dropout_rate))                          # ToDo: Dodać parametryzacje
+                if dropout_rate_shared > 0:
+                    shared_net.append(nn.Dropout(p=dropout_rate_shared))                          # ToDo: Dodać parametryzacje
                 last_layer_dim_shared = layer_size
             else:
                 assert isinstance(layer, dict), "Error: the net_arch list can only contain ints and dicts"
@@ -83,15 +87,21 @@ class MlpExtractorWithDropout(nn.Module):
                 assert isinstance(pi_layer_size, int), "Error: net_arch[-1]['pi'] must only contain integers."
                 policy_net.append(nn.Linear(last_layer_dim_pi, pi_layer_size))
                 policy_net.append(activation_fn())
-                policy_net.append(nn.Dropout(p=dropout_rate))
+                if dropout_rate_actor > 0 and not dropout_only_on_last_layer:
+                    policy_net.append(nn.Dropout(p=dropout_rate_actor))
                 last_layer_dim_pi = pi_layer_size
 
             if vf_layer_size is not None:
                 assert isinstance(vf_layer_size, int), "Error: net_arch[-1]['vf'] must only contain integers."
                 value_net.append(nn.Linear(last_layer_dim_vf, vf_layer_size))
                 value_net.append(activation_fn())
-                value_net.append(nn.Dropout(p=dropout_rate))
+                if dropout_rate_critic > 0 and not dropout_only_on_last_layer:
+                    value_net.append(nn.Dropout(p=dropout_rate_critic))
                 last_layer_dim_vf = vf_layer_size
+
+        if dropout_only_on_last_layer:
+            if dropout_rate_actor > 0: policy_net.append(nn.Dropout(p=dropout_rate_actor))
+            if dropout_rate_critic > 0: value_net.append(nn.Dropout(p=dropout_rate_critic))
 
         # Save dim, used to create the distributions
         self.latent_dim_pi = last_layer_dim_pi
@@ -113,8 +123,13 @@ class MlpExtractorWithDropout(nn.Module):
 
 
 def create_mlp_with_dropout(
-    input_dim: int, output_dim: int, net_arch: List[int], activation_fn: Type[nn.Module] = nn.ReLU,
-        squash_output: bool = False, dropout_rate: float = 0.5) -> List[nn.Module]:
+        input_dim: int,
+        output_dim: int,
+        net_arch: List[int],
+        activation_fn: Type[nn.Module] = nn.ReLU,
+        squash_output: bool = False,
+        dropout_rate: float = 0.5,
+        dropout_only_on_last_layer: bool = True) -> List[nn.Module]:
     """
     Create a multi layer perceptron (MLP), which is
     a collection of fully-connected layers each followed by an activation function and dropout.
@@ -133,14 +148,17 @@ def create_mlp_with_dropout(
     """
 
     if len(net_arch) > 0:
-        modules = [nn.Linear(input_dim, net_arch[0]), activation_fn(), nn.Dropout(p=dropout_rate)]
+        modules = [nn.Linear(input_dim, net_arch[0]), activation_fn()]
+        if dropout_rate > 0 and (not dropout_only_on_last_layer):
+            modules.append(nn.Dropout(p=dropout_rate))
     else:
         modules = []
 
     for idx in range(len(net_arch) - 1):
         modules.append(nn.Linear(net_arch[idx], net_arch[idx + 1]))
         modules.append(activation_fn())
-        modules.append(nn.Dropout(p=dropout_rate))
+        if dropout_rate > 0 and (not dropout_only_on_last_layer or idx == len(net_arch) - 2):
+            modules.append(nn.Dropout(p=dropout_rate))
 
     if output_dim > 0:
         last_layer_dim = net_arch[-1] if len(net_arch) > 0 else input_dim

@@ -257,7 +257,9 @@ class SACPolicy(BaseSACPolicy):
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         create_network_function: callable = create_mlp,
-        dropout_rate: Optional[float] = None,
+        dropout_rate_actor: float = 0,
+        dropout_rate_critic: float = 0,
+        dropout_only_on_last_layer: bool = True,
         weight_decay: Optional[float] = 0.0,
         manifold_mixup_alpha: Optional[float] = 0.0,
         last_layer_mixup: Optional[int] = 1,
@@ -269,7 +271,9 @@ class SACPolicy(BaseSACPolicy):
     ):
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+            self.dropout_rate_actor = dropout_rate_actor
+            self.dropout_rate_critic = dropout_rate_critic
+            self.dropout_only_on_last_layer = dropout_only_on_last_layer
         self.manifold_mixup_alpha = manifold_mixup_alpha
         self.last_layer_mixup = last_layer_mixup
 
@@ -332,13 +336,15 @@ class SACPolicy(BaseSACPolicy):
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Actor:
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            actor_kwargs['dropout_rate'] = self.dropout_rate
+            actor_kwargs['dropout_rate'] = self.dropout_rate_actor
+            actor_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
         return Actor(create_network=self.create_network_function, **actor_kwargs).to(self.device)
 
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Any:
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            critic_kwargs['dropout_rate'] = self.dropout_rate
+            critic_kwargs['dropout_rate_critic'] = self.dropout_rate_critic
+            critic_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
             return ContinuousCriticWithDropout(create_network=self.create_network_function, **critic_kwargs).to(self.device)
         elif self.manifold_mixup_alpha > 0:
             critic_kwargs['alpha'] = self.manifold_mixup_alpha

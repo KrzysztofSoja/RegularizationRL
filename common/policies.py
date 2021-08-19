@@ -60,7 +60,8 @@ class ContinuousCriticWithDropout(BaseModel):
         features_extractor: nn.Module,
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
-        dropout_rate: Optional[float] = .5,
+        dropout_rate: Optional[float] = .0,
+        dropout_only_on_last_layer: bool = True,
         create_network: callable = create_mlp,
         normalize_images: bool = True,
         n_critics: int = 2,
@@ -81,7 +82,9 @@ class ContinuousCriticWithDropout(BaseModel):
         self.q_networks = []
         for idx in range(n_critics):
             if create_network.__name__ == create_mlp_with_dropout.__name__:
-                q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn, dropout_rate=dropout_rate)
+                q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn,
+                                       dropout_rate=dropout_rate,
+                                       dropout_only_on_last_layer=dropout_only_on_last_layer)
             else:
                 q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn)
             q_net = nn.Sequential(*q_net)

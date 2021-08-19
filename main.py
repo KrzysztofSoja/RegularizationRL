@@ -97,7 +97,10 @@ if __name__ == '__main__':
     parser.add_argument('--additional_tag', type=str, default=None)
 
     # Algorithm parameters
-    parser.add_argument('--dropout', type=float, default=False)
+    parser.add_argument('--dropout_rate_critic', type=float, default=0)
+    parser.add_argument('--dropout_rate_actor', type=float, default=0)
+    parser.add_argument('--dropout_only_on_last_layer', type=bool, default=True)
+
     parser.add_argument('--weight_decay', type=float, default=False)
     parser.add_argument('--entropy_coefficient', type=float, default=False)
     parser.add_argument('--manifold_mixup_alpha', type=float, default=False)
@@ -114,10 +117,10 @@ if __name__ == '__main__':
 
     # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo, "Algorithm name must be defined in stable_baselines3."
-    assert args.dropout is False or .0 < args.dropout < 1, "Dropout value must be from zero to one. "
+    assert 0 <= args.dropout_rate_critic < 1, "Dropout value must be from zero to one. "
+    assert 0 <= args.dropout_rate_actor < 1, "Dropout value must be from zero to one. "
     assert args.manifold_mixup_alpha is False or args.manifold_mixup_alpha >= 0.0, \
         "Manifold mixup alpha must be positive real number."
-    assert not (args.dropout and args.manifold_mixup_alpha), "Not implemented."
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -128,8 +131,14 @@ if __name__ == '__main__':
         args.workers = 1
 
     print(f'Starting experiment with {args.algo} algorithm in {args.env} with {args.workers} for {args.steps} steps.')
-    if args.dropout:
-        print(f'Algorithm using dropout with a value {args.dropout}')
+    if args.dropout_rate_critic:
+        print(f'Algorithm using dropout with a value {args.dropout_rate_critic} on critic')
+
+    if args.dropout_rate_actor:
+        print(f'Algorithm using dropout with a value {args.dropout_rate_actor} on actor')
+
+    if not args.dropout_only_on_last_layer:
+        print("Dropout will be applicated on every layer in network.")
 
     if args.weight_decay:
         print(f'Algorithm using weight decay with a value {args.weight_decay}')
@@ -170,13 +179,17 @@ if __name__ == '__main__':
     if args.algo in {'A2C', 'PPO', 'SAC', 'TQC'}:
         model_kwargs['use_sde'] = args.use_sde
 
-    if args.dropout:
+    if args.dropout_rate_critic or args.dropout_rate_actor:
         if args.algo in {'A2C', 'PPO'}:
             policy_kwargs['mlp_extractor_class'] = MlpExtractorWithDropout
-            policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate': args.dropout}
+            policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate_critic': args.dropout_rate_critic,
+                                                     'dropout_rate_actor': args.dropout_rate_actor,
+                                                     'dropout_only_on_last_layer': args.dropout_only_on_last_layer}
         else:
             policy_kwargs['create_network_function'] = create_mlp_with_dropout
-            policy_kwargs['dropout_rate'] = args.dropout
+            policy_kwargs['dropout_rate_critic'] = args.dropout_rate_critic
+            policy_kwargs['dropout_rate_actor'] = args.dropout_rate_actor
+            policy_kwargs['dropout_only_on_last_layer'] = args.dropout_only_on_last_layer
 
     if args.weight_decay:
         policy_kwargs['weight_decay'] = args.weight_decay

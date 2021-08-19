@@ -11,21 +11,30 @@ lines = []
 
 
 n_experiment = 0
-for environment_name, algorithm, seed, dropout, weight_decay, entropy_coefficient, manifold_mixup_alpha, \
-        gradient_penalty_actor, gradient_penalty_actor_k, gradient_penalty_critic, gradient_penalty_critic_k in \
-        product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT, WEIGHT_DECAY, ENTROPY_COEFFICIENT, MANIFOLD_MIXUP_ALPHA,
+for environment_name, algorithm, seed, dropout_rate_critic, dropout_rate_actor, dropout_only_on_last_layer, weight_decay,\
+    entropy_coefficient, manifold_mixup_alpha, gradient_penalty_actor, gradient_penalty_actor_k, gradient_penalty_critic, \
+    gradient_penalty_critic_k in \
+        product(ENVIRONMENT_NAMES, ALGORITHMS, SEEDS, DROPOUT_RATE_ACTOR, DROPOUT_RATE_CRITIC,
+                DROPOUT_ONLY_ON_LAST_LAYER, WEIGHT_DECAY, ENTROPY_COEFFICIENT, MANIFOLD_MIXUP_ALPHA,
                 GRADIENT_PENALTY_ACTOR, GRADIENT_PENALTY_ACTOR_K, GRADIENT_PENALTY_CRITIC, GRADIENT_PENALTY_CRITIC_K):
 
-    if not is_defined(algorithm, environment_name):
-        continue
+    #if not is_defined(algorithm, environment_name):
+    #    continue
 
-    command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {get_steps(algorithm, environment_name)} --workers {WORKERS}"
+    command = f"{EXECUTABLE} {PATH_TO_MAIN} --env {environment_name} --algo {algorithm} --steps {STEPS} --workers {WORKERS}"
 
     if 'SEEDS' in globals() and seed:
         command += f" --seed {seed}"
 
-    if dropout:
-        command += f" --dropout {dropout}"
+    if dropout_rate_critic:
+        command += f" --dropout_rate_critic {dropout_rate_critic}"
+
+    if dropout_rate_actor:
+        command += f" --dropout_rate_critic {dropout_rate_actor}"
+
+    # Default value is True
+    if not dropout_rate_critic:
+        command += f" --dropout_only_on_last_layer {dropout_only_on_last_layer}"
 
     if weight_decay:
         command += f" --weight_decay {weight_decay}"

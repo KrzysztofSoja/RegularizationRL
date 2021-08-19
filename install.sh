@@ -3,6 +3,8 @@
 pip -V
 pip install --upgrade pip
 
+pip install psutil
+
 pip install gym
 
 pip install pybullet
@@ -20,3 +22,6 @@ pip install sb3-contrib==1.0
 pip install neptune-client
 pip install neptune-contrib
 pip install opencv-python
+
+pip install tqdm
+pip install seaborn

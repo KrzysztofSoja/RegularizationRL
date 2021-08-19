@@ -46,7 +46,8 @@ class Actor(BasePolicy):
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
         create_network: callable = create_mlp,
-        dropout_rate: Optional[float] = .5,
+        dropout_rate: Optional[float] = .0,
+        dropout_only_on_last_layer: bool = True,
         normalize_images: bool = True,
     ):
         super(Actor, self).__init__(
@@ -65,7 +66,12 @@ class Actor(BasePolicy):
 
         action_dim = get_action_dim(self.action_space)
         if create_network.__name__ == create_mlp_with_dropout.__name__:
-            actor_net = create_network(features_dim, action_dim, net_arch, activation_fn, dropout_rate=dropout_rate,
+            actor_net = create_network(features_dim,
+                                       action_dim,
+                                       net_arch,
+                                       activation_fn,
+                                       dropout_rate=dropout_rate,
+                                       dropout_only_on_last_layer=dropout_only_on_last_layer,
                                        squash_output=True)
         else:
             actor_net = create_network(features_dim, action_dim, net_arch, activation_fn, squash_output=True)
@@ -124,7 +130,9 @@ class TD3Policy(BaseTD3Policy):
         lr_schedule: Callable,
         net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
         activation_fn: Type[nn.Module] = nn.ReLU,
-        dropout_rate: Optional[float] = None,
+        dropout_rate_actor: float = 0,
+        dropout_rate_critic: float = 0,
+        dropout_only_on_last_layer: bool = True,
         weight_decay: Optional[float] = 0.0,
         manifold_mixup_alpha: Optional[float] = 0.0,
         last_layer_mixup: Optional[int] = 1,
@@ -137,7 +145,6 @@ class TD3Policy(BaseTD3Policy):
         n_critics: int = 2,
         share_features_extractor: bool = True,
     ):
-        assert not (dropout_rate is not None and dropout_rate > 0 and manifold_mixup_alpha > 0), 'Not implemented.'
 
         if weight_decay != 0.0:
             if optimizer_kwargs is None:
@@ -147,7 +154,9 @@ class TD3Policy(BaseTD3Policy):
         self.weight_decay = weight_decay
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+            self.dropout_rate_actor = dropout_rate_actor
+            self.dropout_rate_critic = dropout_rate_critic
+            self.dropout_only_on_last_layer = dropout_only_on_last_layer
         self.manifold_mixup_alpha = manifold_mixup_alpha
         self.last_layer_mixup = last_layer_mixup
 
@@ -169,20 +178,23 @@ class TD3Policy(BaseTD3Policy):
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Actor:
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            actor_kwargs['dropout_rate'] = self.dropout_rate
+            actor_kwargs['dropout_rate'] = self.dropout_rate_actor
+            actor_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
+
+            print(self.create_network_function)
 
         return Actor(create_network=self.create_network_function, **actor_kwargs).to(self.device)
 
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Any:
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            critic_kwargs['dropout_rate'] = self.dropout_rate
+            critic_kwargs['dropout_rate'] = self.dropout_rate_critic
+            critic_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
             return ContinuousCriticWithDropout(create_network=self.create_network_function, **critic_kwargs).to(self.device)
         elif self.manifold_mixup_alpha > 0:
             critic_kwargs['alpha'] = self.manifold_mixup_alpha
             critic_kwargs['last_layer_mixup'] = self.last_layer_mixup
-            return ContinuousCriticWithManifoldMixup(**critic_kwargs).to(
-                self.device)
+            return ContinuousCriticWithManifoldMixup(**critic_kwargs).to(self.device)
         else:
             return super(TD3Policy, self).make_critic(features_extractor)
 
