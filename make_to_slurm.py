@@ -20,7 +20,7 @@ f"""#!/bin/bash -l
 ## Maksymalny czas trwania zlecenia (format HH:MM:SS)
 #SBATCH --time={hours}:00:00 
 ## Nazwa grantu do rozliczenia zużycia zasobów
-#SBATCH -A plgcontinualrl
+#SBATCH -A plgcontinualrlgpu
 ## Specyfikacja partycji
 #SBATCH -p plgrid
 ## Plik ze standardowym wyjściem

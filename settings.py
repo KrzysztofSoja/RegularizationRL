@@ -25,7 +25,7 @@ ENVIRONMENT_NAMES = MUJOCO
 
 # Algorithms settings
 
-ALGORITHMS = ['PPO', 'A2C', 'SAC', 'TQC', 'DDPG', 'TD3']
+ALGORITHMS = ['PPO', 'A2C', 'SAC', 'DDPG', 'TD3'] 
 SEEDS = [111, 12345, 777, 56765, 97531245]
 STEPS = 2_500_000
 WORKERS = 8
@@ -37,9 +37,10 @@ USE_SDE = False
 
 # Regularizers settings
 
-DROPOUT = [0.2, 0.3, 0.4, 0.5]
-WEIGHT_DECAY = [False]
+DROPOUT = [False]# [0.2, 0.3, 0.4, 0.5]
+WEIGHT_DECAY = [0.01, 0.001, 0.0001, 0.00001]
 ENTROPY_COEFFICIENT = [False]  # , 0.01, 0.05, 0.1, 0.5, 1]
+MANIFOLD_MIXUP_ALPHA = [0]  #[0.1, 0.4, 0.8, 1.0, 2.0, 4.0]
 
 
 # Logs settings
@@ -48,7 +49,7 @@ USE_NEPTUNE = True
 MAKE_VIDEO_FREQ = 100_000
 VALIDATION_FREQ = 10_000
 VALIDATION_LENGTH = 100
-COMMENT = "Using gSDE in basing algorithm."
+COMMENT = "Testing weight decay"
 
 
 # Experiments settings
