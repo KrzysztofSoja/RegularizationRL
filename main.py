@@ -1,6 +1,6 @@
 import os
 import gym
-import pybulletgym
+# mport pybulletgym
 import time
 import argparse
 import torch
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--algo', type=str, required=True)
     parser.add_argument('--steps', type=int, default=1_000_000)
     parser.add_argument('--workers', type=int, default=1)
-    parser.add_argument('--seed', type=int, default=None)
+    parser.add_argument('--seed', type=int, default=0)
 
     # Logger parameters
     parser.add_argument('--make_video_freq', type=int, default=0)
@@ -94,22 +94,35 @@ if __name__ == '__main__':
     parser.add_argument('--validation_length', type=int, default=10)
     parser.add_argument('--use_neptune', default=False, action='store_true')
     parser.add_argument('--comment', type=str, default=None)
+    parser.add_argument('--additional_tag', type=str, default=None)
 
     # Algorithm parameters
-    parser.add_argument('--dropout', type=float, default=False)
+    parser.add_argument('--dropout_rate_critic', type=float, default=0)
+    parser.add_argument('--dropout_rate_actor', type=float, default=0)
+    parser.add_argument('--dropout_only_on_last_layer', type=bool, default=True)
+
     parser.add_argument('--weight_decay', type=float, default=False)
     parser.add_argument('--entropy_coefficient', type=float, default=False)
     parser.add_argument('--manifold_mixup_alpha', type=float, default=False)
+
+    parser.add_argument('--gradient_penalty_actor', type=float, default=False)
+    parser.add_argument('--gradient_penalty_actor_k', type=float, default=0)
+    parser.add_argument('--gradient_penalty_critic', type=float, default=False)
+    parser.add_argument('--gradient_penalty_critic_k', type=float, default=0)
+
     parser.add_argument('--use_sde', default=False, action='store_true')
+    parser.add_argument('--device', default='cpu', type=str)
 
     args = parser.parse_args()
 
     # assert args.env in ENVIRONMENT_NAMES, "Environments must be in environment list."
     assert args.algo in sb.__dict__ or args.algo, "Algorithm name must be defined in stable_baselines3."
-    assert args.dropout is False or .0 < args.dropout < 1, "Dropout value must be from zero to one. "
+    assert 0 <= args.dropout_rate_critic < 1, "Dropout value must be from zero to one. "
+    assert 0 <= args.dropout_rate_actor < 1, "Dropout value must be from zero to one. "
     assert args.manifold_mixup_alpha is False or args.manifold_mixup_alpha >= 0.0, \
         "Manifold mixup alpha must be positive real number."
-    assert not (args.dropout and args.manifold_mixup_alpha), "Not implemented."
+    assert not (args.dropout_rate_critic > 0 and args.manifold_mixup_alpha), "Not implemented."
+    assert not (args.dropout_rate_actor > 0 and args.manifold_mixup_alpha), "Not implemented."
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -120,8 +133,14 @@ if __name__ == '__main__':
         args.workers = 1
 
     print(f'Starting experiment with {args.algo} algorithm in {args.env} with {args.workers} for {args.steps} steps.')
-    if args.dropout:
-        print(f'Algorithm using dropout with a value {args.dropout}')
+    if args.dropout_rate_critic:
+        print(f'Algorithm using dropout with a value {args.dropout_rate_critic} on critic')
+
+    if args.dropout_rate_actor:
+        print(f'Algorithm using dropout with a value {args.dropout_rate_actor} on actor')
+
+    if not args.dropout_only_on_last_layer:
+        print("Dropout will be applicated on every layer in network.")
 
     if args.weight_decay:
         print(f'Algorithm using weight decay with a value {args.weight_decay}')
@@ -132,16 +151,29 @@ if __name__ == '__main__':
     if args.manifold_mixup_alpha:
         print(f"Algorithm use manifold mixup regularization with alpha parameter {args.manifold_mixup_alpha}")
 
+    if args.gradient_penalty_actor:
+        print(f"Algorithm use gradient penalty on actor with alpha parameter equal {args.gradient_penalty_actor}"
+              f" and k equal {args.gradient_penalty_actor_k}")
+
+    if args.gradient_penalty_critic:
+        print(f"Algorithm use gradient penalty on actor with alpha parameter equal {args.gradient_penalty_critic}"
+              f"and k equal {args.gradient_penalty_critic_k}")
+
     path_to_logs = os.path.join(MAIN_DIR, args.algo + '-' + args.env + '-' + str(time.time()).replace('.', ''))
     if not os.path.exists(path_to_logs):
         os.mkdir(path_to_logs)
 
     if args.algo in MULTI_ENV:
-        train_env = DummyVecEnv([_make_env(args.env, i, path_to_logs) for i in range(args.workers)])
+        train_env = DummyVecEnv([_make_env(args.env, i, path_to_logs, seed=args.seed) for i in range(args.workers)])
         eval_env = gym.make(args.env)
+        eval_env.seed(args.seed)
     else:
-        train_env = CyclicMonitor(gym.make(args.env), max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
+        env = gym.make(args.env)
+        env.seed(args.seed)
+        train_env = CyclicMonitor(env, max_file_size=20, filename=os.path.join(path_to_logs, f'all'))
         eval_env = gym.make(args.env)
+        eval_env.seed(args.seed)
+        set_random_seed(args.seed)
 
     model_kwargs = dict()
     policy_kwargs = dict()
@@ -149,13 +181,17 @@ if __name__ == '__main__':
     if args.algo in {'A2C', 'PPO', 'SAC', 'TQC'}:
         model_kwargs['use_sde'] = args.use_sde
 
-    if args.dropout:
+    if args.dropout_rate_critic or args.dropout_rate_actor:
         if args.algo in {'A2C', 'PPO'}:
             policy_kwargs['mlp_extractor_class'] = MlpExtractorWithDropout
-            policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate': args.dropout}
+            policy_kwargs['mpl_extractor_kwargs'] = {'dropout_rate_critic': args.dropout_rate_critic,
+                                                     'dropout_rate_actor': args.dropout_rate_actor,
+                                                     'dropout_only_on_last_layer': args.dropout_only_on_last_layer}
         else:
             policy_kwargs['create_network_function'] = create_mlp_with_dropout
-            policy_kwargs['dropout_rate'] = args.dropout
+            policy_kwargs['dropout_rate_critic'] = args.dropout_rate_critic
+            policy_kwargs['dropout_rate_actor'] = args.dropout_rate_actor
+            policy_kwargs['dropout_only_on_last_layer'] = args.dropout_only_on_last_layer
 
     if args.weight_decay:
         policy_kwargs['weight_decay'] = args.weight_decay
@@ -185,7 +221,11 @@ if __name__ == '__main__':
                        policy_kwargs=policy_kwargs, device='cpu', **model_kwargs)
     else:
         model = sb.__dict__[args.algo](POLICY[args.algo], train_env, policy_kwargs=policy_kwargs, verbose=1,
-                                       device='cpu', **model_kwargs)
+                                       actor_gradient_penalty=args.gradient_penalty_actor,
+                                       critic_gradient_penalty=args.gradient_penalty_critic,
+                                       actor_gradient_penalty_k=args.gradient_penalty_actor_k,
+                                       critic_gradient_penalty_k=args.gradient_penalty_critic_k,
+                                       device=args.device, **model_kwargs)
 
     if args.use_neptune:
         callback_manager = NeptuneCallback(model=model, experiment_name=args.env, neptune_account_name='nkrsi',
@@ -201,4 +241,4 @@ if __name__ == '__main__':
     model.learn(total_timesteps=args.steps, callback=callback_manager)
     model.save(os.path.join(path_to_logs, 'last_model.plk'))
 
-    del callback_manager
+    print("Training done.")

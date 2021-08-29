@@ -14,7 +14,7 @@ from modificated_sb3.tqc import MlpPolicy as TQCMlpPolicy
 from common.torch_layers import MlpExtractorWithDropout, create_mlp_with_dropout
 
 
-class TestDropout(unittest.TestCase):
+class BaseTestDropout(unittest.TestCase):
     """
     In this class, simple test is made. The assumption is to choose the parameter wd in such a way as to spoil
     the training. If a model with a large d parameter breaks, it means that setting it changes the behavior
@@ -40,15 +40,15 @@ class TestDropout(unittest.TestCase):
 
     def test_a2c(self):
         print('Testing dropout in A2C model...')
-        test_model = A2C(A2CMlpPolicy, TestDropout.TEST_ENV_BOX,
+        test_model = A2C(A2CMlpPolicy, BaseTestDropout.TEST_ENV_BOX,
                          policy_kwargs={'mlp_extractor_class': MlpExtractorWithDropout,
                                         'mpl_extractor_kwargs': {'dropout_rate': 0.5}}, verbose=0)
         test_model.learn(10_000)
-        target_model = A2C(A2CMlpPolicy, TestDropout.TEST_ENV_BOX, verbose=0)
+        target_model = A2C(A2CMlpPolicy, BaseTestDropout.TEST_ENV_BOX, verbose=0)
         target_model.learn(10_000)
 
-        gain_from_test = TestDropout.__evaluate_model(test_model, TestDropout.TEST_ENV_BOX)
-        gain_from_target = TestDropout.__evaluate_model(target_model, TestDropout.TEST_ENV_BOX)
+        gain_from_test = BaseTestDropout.__evaluate_model(test_model, BaseTestDropout.TEST_ENV_BOX)
+        gain_from_target = BaseTestDropout.__evaluate_model(target_model, BaseTestDropout.TEST_ENV_BOX)
 
         print(f"Gain from test model - {gain_from_test}. Gain from target model - {gain_from_target}.")
         self.assertGreaterEqual(gain_from_target/gain_from_test, 2)
@@ -62,11 +62,11 @@ class TestDropout(unittest.TestCase):
                                         'mpl_extractor_kwargs': {'dropout_rate': 0.8}}, verbose=0)
 
         test_model.learn(10_000)
-        target_model = PPO(PPOMlpPolicy, TestDropout.TEST_ENV_BOX, verbose=0)
+        target_model = PPO(PPOMlpPolicy, BaseTestDropout.TEST_ENV_BOX, verbose=0)
         target_model.learn(10_000)
 
-        gain_from_test = TestDropout.__evaluate_model(test_model, TestDropout.TEST_ENV_BOX)
-        gain_from_target = TestDropout.__evaluate_model(target_model, TestDropout.TEST_ENV_BOX)
+        gain_from_test = BaseTestDropout.__evaluate_model(test_model, BaseTestDropout.TEST_ENV_BOX)
+        gain_from_target = BaseTestDropout.__evaluate_model(target_model, BaseTestDropout.TEST_ENV_BOX)
 
         print(f"Gain from test model - {gain_from_test}. Gain from target model - {gain_from_target}.")
         self.assertIn("Dropout(p=0.8,", str(test_model.policy))
@@ -79,7 +79,7 @@ class TestDropout(unittest.TestCase):
         """
 
         print('Testing weight decay in DDPG model...')
-        model = DDPG(DDPGMlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+        model = DDPG(DDPGMlpPolicy, BaseTestDropout.TEST_ENV_CONTINUUM,
                      policy_kwargs={'create_network_function': create_mlp_with_dropout,
                                     'dropout_rate': 0.5}, verbose=0)   # This is too strong! It is creepy.
 
@@ -92,7 +92,7 @@ class TestDropout(unittest.TestCase):
         """
 
         print('Testing weight decay in DDPG model...')
-        model = SAC(SACMlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+        model = SAC(SACMlpPolicy, BaseTestDropout.TEST_ENV_CONTINUUM,
                     policy_kwargs={'create_network_function': create_mlp_with_dropout,
                                    'dropout_rate': 0.5}, verbose=0)   # This is too strong! It is creepy.
         self.assertIn("Dropout(p=0.5,", str(model.policy))
@@ -104,7 +104,7 @@ class TestDropout(unittest.TestCase):
         """
 
         print('Testing weight decay in TD3 model...')
-        model = TD3(TD3MlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+        model = TD3(TD3MlpPolicy, BaseTestDropout.TEST_ENV_CONTINUUM,
                     policy_kwargs={'create_network_function': create_mlp_with_dropout,
                                    'dropout_rate': 0.5}, verbose=0)  # This is too strong! It is creepy.
 
@@ -117,8 +117,52 @@ class TestDropout(unittest.TestCase):
         """
 
         print('Testing weight decay in TQC model...')
-        model = TQC(TQCMlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+        model = TQC(TQCMlpPolicy, BaseTestDropout.TEST_ENV_CONTINUUM,
                     policy_kwargs={'create_network_function': create_mlp_with_dropout,
                                    'dropout_rate': 0.5}, verbose=0)  # This is too strong! It is creepy.
         self.assertIn("Dropout(p=0.5,", str(model.policy))
         print('Test pass :)')
+
+
+class TestDropout(unittest.TestCase):
+
+    TEST_ENV_BOX = 'CartPole-v1'
+    TEST_ENV_CONTINUUM = 'Pendulum-v0'
+
+    def test_a2c(self):
+        model = A2C(A2CMlpPolicy, TestDropout.TEST_ENV_BOX,
+                    policy_kwargs={'mlp_extractor_class': MlpExtractorWithDropout,
+                                   'mpl_extractor_kwargs': {'dropout_rate_actor': 0.1,
+                                                            'dropout_rate_critic': 0,
+                                                            'dropout_only_on_last_layer': False}}, verbose=1)
+
+        print(model.policy)
+        model.learn(10_000)
+
+    def test_ppo(self):
+        model = PPO(PPOMlpPolicy, TestDropout.TEST_ENV_BOX,
+                    policy_kwargs={'mlp_extractor_class': MlpExtractorWithDropout,
+                                   'mpl_extractor_kwargs': {'dropout_rate_actor': 0.2,
+                                                            'dropout_rate_critic': 0.2,
+                                                            'dropout_only_on_last_layer': True}}, verbose=1)
+
+        print(model.policy)
+        model.learn(10_000)
+
+    def test_td3(self):
+        model = TD3(TD3MlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+                    policy_kwargs={'create_network_function': create_mlp_with_dropout,
+                                   'dropout_rate_actor': 0.5,
+                                   'dropout_rate_critic': 0.5}, verbose=1)
+        print(model.policy)
+        model.learn(10_000)
+
+
+    def test_sac(self):
+        model = TD3(TD3MlpPolicy, TestDropout.TEST_ENV_CONTINUUM,
+                    policy_kwargs={'create_network_function': create_mlp_with_dropout,
+                                   'dropout_rate_actor': 0.1,
+                                   'dropout_rate_critic': 0,
+                                   'dropout_only_on_last_layer': True}, verbose=1)
+        print(model.policy)
+        model.learn(10_000)

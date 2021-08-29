@@ -18,10 +18,14 @@ from stable_baselines3.common.torch_layers import (
 from stable_baselines3.common import logger
 from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.sac.policies import SACPolicy as BaseSACPolicy
+from stable_baselines3.common.noise import ActionNoise
+from stable_baselines3.common.type_aliases import GymEnv, Schedule
+
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from common.torch_layers import create_mlp_with_dropout
 from common.policies import ContinuousCritic, ContinuousCriticWithManifoldMixup, ContinuousCriticWithDropout
+from common.gradient_penalty import gradient_penalty, gradient_penalty_for_continues_critic
 
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
@@ -253,7 +257,9 @@ class SACPolicy(BaseSACPolicy):
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         create_network_function: callable = create_mlp,
-        dropout_rate: Optional[float] = None,
+        dropout_rate_actor: float = 0,
+        dropout_rate_critic: float = 0,
+        dropout_only_on_last_layer: bool = True,
         weight_decay: Optional[float] = 0.0,
         manifold_mixup_alpha: Optional[float] = 0.0,
         last_layer_mixup: Optional[int] = 1,
@@ -263,10 +269,11 @@ class SACPolicy(BaseSACPolicy):
         n_critics: int = 2,
         share_features_extractor: bool = True,
     ):
-
         self.create_network_function = create_network_function
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            self.dropout_rate = .5 if dropout_rate is None else dropout_rate
+            self.dropout_rate_actor = dropout_rate_actor
+            self.dropout_rate_critic = dropout_rate_critic
+            self.dropout_only_on_last_layer = dropout_only_on_last_layer
         self.manifold_mixup_alpha = manifold_mixup_alpha
         self.last_layer_mixup = last_layer_mixup
 
@@ -329,13 +336,15 @@ class SACPolicy(BaseSACPolicy):
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Actor:
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            actor_kwargs['dropout_rate'] = self.dropout_rate
+            actor_kwargs['dropout_rate'] = self.dropout_rate_actor
+            actor_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
         return Actor(create_network=self.create_network_function, **actor_kwargs).to(self.device)
 
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Any:
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         if self.create_network_function.__name__ == create_mlp_with_dropout.__name__:
-            critic_kwargs['dropout_rate'] = self.dropout_rate
+            critic_kwargs['dropout_rate_critic'] = self.dropout_rate_critic
+            critic_kwargs['dropout_only_on_last_layer'] = self.dropout_only_on_last_layer
             return ContinuousCriticWithDropout(create_network=self.create_network_function, **critic_kwargs).to(self.device)
         elif self.manifold_mixup_alpha > 0:
             critic_kwargs['alpha'] = self.manifold_mixup_alpha
@@ -346,8 +355,73 @@ class SACPolicy(BaseSACPolicy):
             return super(SACPolicy, self).make_critic(features_extractor)
 
 
-
 class SAC(BaseSAC):
+
+    def __init__(
+        self,
+        policy: Union[str, Type[SACPolicy]],
+        env: Union[GymEnv, str],
+        learning_rate: Union[float, Schedule] = 3e-4,
+        buffer_size: int = int(1e6),
+        learning_starts: int = 100,
+        batch_size: int = 256,
+        tau: float = 0.005,
+        gamma: float = 0.99,
+        train_freq: Union[int, Tuple[int, str]] = 1,
+        gradient_steps: int = 1,
+        action_noise: Optional[ActionNoise] = None,
+        optimize_memory_usage: bool = False,
+        ent_coef: Union[str, float] = "auto",
+        target_update_interval: int = 1,
+        target_entropy: Union[str, float] = "auto",
+        use_sde: bool = False,
+        actor_gradient_penalty: float = 0.0,
+        critic_gradient_penalty: float = 0.0,
+        actor_gradient_penalty_k: float = 1.0,
+        critic_gradient_penalty_k: float = 1.0,
+        sde_sample_freq: int = -1,
+        use_sde_at_warmup: bool = False,
+        tensorboard_log: Optional[str] = None,
+        create_eval_env: bool = False,
+        policy_kwargs: Dict[str, Any] = None,
+        verbose: int = 0,
+        seed: Optional[int] = None,
+        device: Union[th.device, str] = "auto",
+        _init_setup_model: bool = True
+    ):
+
+        self.actor_gradient_penalty = actor_gradient_penalty
+        self.critic_gradient_penalty = critic_gradient_penalty
+        self.actor_gradient_penalty_k = actor_gradient_penalty_k
+        self.critic_gradient_penalty_k = critic_gradient_penalty_k
+
+        super(SAC, self).__init__(
+            policy=policy,
+            env=env,
+            learning_rate=learning_rate,
+            buffer_size=buffer_size,
+            learning_starts=learning_starts,
+            batch_size=batch_size,
+            tau=tau,
+            gamma=gamma,
+            train_freq=train_freq,
+            gradient_steps=gradient_steps,
+            action_noise=action_noise,
+            optimize_memory_usage=optimize_memory_usage,
+            ent_coef=ent_coef,
+            target_update_interval=target_update_interval,
+            target_entropy=target_entropy,
+            use_sde=use_sde,
+            sde_sample_freq=sde_sample_freq,
+            use_sde_at_warmup=use_sde_at_warmup,
+            tensorboard_log=tensorboard_log,
+            create_eval_env=create_eval_env,
+            policy_kwargs=policy_kwargs,
+            verbose=verbose,
+            seed=seed,
+            device=device,
+            _init_setup_model=_init_setup_model
+        )
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update optimizers learning rate
@@ -413,12 +487,23 @@ class SAC(BaseSAC):
                 current_q_values_and_new_targets = self.critic(replay_data.observations, replay_data.actions,
                                                                target_q_values)
                 # Compute critic loss with new targets
-                critic_loss = 0.5 * sum([F.mse_loss(current_q, new_target) for current_q, new_target in
-                                   current_q_values_and_new_targets])
+                critic_loss = 0.5 * sum([F.mse_loss(current_q, new_target) for current_q, new_target in                 # Tu jest loss
+                                         current_q_values_and_new_targets])
             else:
                 current_q_values = self.critic(replay_data.observations, replay_data.actions)
                  # Compute critic loss
                 critic_loss = 0.5 * sum([F.mse_loss(current_q, target_q_values) for current_q in current_q_values])
+
+            if self.critic_gradient_penalty > 0:
+                gradients_critics = self.critic_gradient_penalty*sum([gradient_penalty_for_continues_critic(critic,
+                                                                               self.critic.features_extractor,
+                                                                               replay_data.observations,
+                                                                               replay_data.actions,
+                                                                               k=self.critic_gradient_penalty_k)
+                                                                     for critic in self.critic.q_networks])
+                critic_loss += gradients_critics
+
+            critic_losses.append(critic_loss.item())
 
             # Optimize the critic
             self.critic.optimizer.zero_grad()
@@ -431,6 +516,12 @@ class SAC(BaseSAC):
             q_values_pi = th.cat(self.critic.forward(replay_data.observations, actions_pi), dim=1)
             min_qf_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
             actor_loss = (ent_coef * log_prob - min_qf_pi).mean()
+
+            if self.actor_gradient_penalty > 0:
+                gradients_actor = self.actor_gradient_penalty*gradient_penalty(self.actor, replay_data.observations,
+                                                                               k=self.actor_gradient_penalty_k)
+                actor_loss += gradients_actor
+
             actor_losses.append(actor_loss.item())
 
             # Optimize the actor
@@ -456,6 +547,11 @@ class SAC(BaseSAC):
             logger.record("train/ent_coef_loss", temp_ent_coef_loss)
             if np.isinf(temp_ent_coef_loss) or np.isnan(temp_ent_coef_loss):
                 raise Exception('Gradient KABUM! ent_coef_loss')
+
+        if self.critic_gradient_penalty > 0:
+            logger.record("train/gradient_penalty_critic", gradients_critics.item())
+        if self.actor_gradient_penalty > 0:
+            logger.record("train/graident_penalty_actor", gradients_actor.item())
 
         if np.isinf(temp_critic_loss) or np.isnan(temp_critic_loss):
             raise Exception('Gradient KABUM! critic_loss.')

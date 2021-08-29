@@ -60,7 +60,8 @@ class ContinuousCriticWithDropout(BaseModel):
         features_extractor: nn.Module,
         features_dim: int,
         activation_fn: Type[nn.Module] = nn.ReLU,
-        dropout_rate: Optional[float] = .5,
+        dropout_rate: Optional[float] = .0,
+        dropout_only_on_last_layer: bool = True,
         create_network: callable = create_mlp,
         normalize_images: bool = True,
         n_critics: int = 2,
@@ -81,7 +82,9 @@ class ContinuousCriticWithDropout(BaseModel):
         self.q_networks = []
         for idx in range(n_critics):
             if create_network.__name__ == create_mlp_with_dropout.__name__:
-                q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn, dropout_rate=dropout_rate)
+                q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn,
+                                       dropout_rate=dropout_rate,
+                                       dropout_only_on_last_layer=dropout_only_on_last_layer)
             else:
                 q_net = create_network(features_dim + action_dim, 1, net_arch, activation_fn)
             q_net = nn.Sequential(*q_net)
@@ -107,26 +110,37 @@ class ContinuousCriticWithDropout(BaseModel):
         return self.q_networks[0](th.cat([features, actions], dim=1))
 
 
-class SingleContinuousCritic(nn.Module):
+class SingleContinuousCritic(BaseModel):
     """
     Part of ContinuousCritic.
     """
 
     def __init__(self,
+                 observation_space: gym.spaces.Space,
+                 action_space: gym.spaces.Space,
                  net_arch: List[int],
+                 features_extractor: nn.Module,
+                 features_dim: int,
                  activation_fn: Type[nn.Module] = nn.ReLU,
+                 normalize_images: bool = True,
                  last_layer_mixup: int = 1,
-                 alpha: float = 0.1,
-                 device: Union[th.device, str] = 'cpu'):
-        super(SingleContinuousCritic, self).__init__()
+                 alpha: float = 0.1):
+        super(SingleContinuousCritic, self).__init__(
+            observation_space,
+            action_space,
+            features_extractor=features_extractor,
+            normalize_images=normalize_images,
+        )
+
+        action_dim = get_action_dim(self.action_space)
+
         self.last_layer_mixup = last_layer_mixup
         self.alpha = alpha
-        self.device = device
 
         assert len(net_arch) == 2, "Depth of this critic isn't regularized. List must have length equal two."
 
         self.layer1 = nn.Sequential(
-            nn.Linear(in_features=4, out_features=net_arch[0], bias=True),
+            nn.Linear(in_features=features_dim + action_dim, out_features=net_arch[0], bias=True),
             activation_fn(),
         )
         self.layer2 = nn.Sequential(
@@ -198,9 +212,7 @@ class ContinuousCriticWithManifoldMixup(BaseModel):
         n_critics: int = 2,
         share_features_extractor: bool = True,
         last_layer_mixup: int = 1,
-        alpha: float = 0.1,
-        device: Union[th.device, str] = 'cpu'
-    ):
+        alpha: float = 0.1):
         super().__init__(
             observation_space,
             action_space,
@@ -214,7 +226,8 @@ class ContinuousCriticWithManifoldMixup(BaseModel):
         self.n_critics = n_critics
         self.q_networks = []
         for idx in range(n_critics):
-            q_net = SingleContinuousCritic(net_arch, activation_fn, last_layer_mixup, alpha, device)
+            q_net = SingleContinuousCritic(observation_space, action_space, net_arch, features_extractor, features_dim,
+                                           activation_fn, normalize_images, last_layer_mixup, alpha)
             self.add_module(f"qf{idx}", q_net)
             self.q_networks.append(q_net)
 

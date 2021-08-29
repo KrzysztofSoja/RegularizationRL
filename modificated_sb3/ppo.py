@@ -15,6 +15,7 @@ try:
 except ImportError:
     from a2c import ActorCriticPolicy
 from common.torch_layers import MlpExtractorWithDropout, MlpExtractorWithManifoldMixup
+from common.gradient_penalty import gradient_penalty_actor_critic
 
 
 __all__ = ['PPO', 'MlpPolicy']
@@ -38,6 +39,10 @@ class PPO(BasePPO):
         vf_coef: float = 0.5,
         max_grad_norm: float = 0.5,
         use_sde: bool = False,
+        actor_gradient_penalty: float = 0.0,
+        critic_gradient_penalty: float = 0.0,
+        actor_gradient_penalty_k: float = 1.0,
+        critic_gradient_penalty_k: float = 1.0,
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = None,
         tensorboard_log: Optional[str] = None,
@@ -57,6 +62,11 @@ class PPO(BasePPO):
         if 'weight_decay' in policy_kwargs.keys():
             policy_kwargs["optimizer_kwargs"]["weight_decay"] = policy_kwargs['weight_decay']
             del policy_kwargs['weight_decay']
+
+        self.actor_gradient_penalty = actor_gradient_penalty
+        self.critic_gradient_penalty = critic_gradient_penalty
+        self.actor_gradient_penalty_k = actor_gradient_penalty_k
+        self.critic_gradient_penalty_k = critic_gradient_penalty_k
 
         super(PPO, self).__init__(
             policy,
@@ -167,7 +177,17 @@ class PPO(BasePPO):
 
                 entropy_losses.append(entropy_loss.item())
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+                if self.actor_gradient_penalty > 0 or self.critic_gradient_penalty > 0:
+                    gradients_critic, gradients_actor = gradient_penalty_actor_critic(self.policy, rollout_data.observations,
+                                                                                      k_for_actor=self.actor_gradient_penalty_k,
+                                                                                      k_for_critic=self.critic_gradient_penalty_k)
+                    gradients_critic *= self.critic_gradient_penalty
+                    gradients_actor *= self.actor_gradient_penalty
+
+                    loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss + gradients_critic \
+                           + gradients_actor
+                else:
+                    loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
                 # Optimization step
                 self.policy.optimizer.zero_grad()
@@ -205,6 +225,11 @@ class PPO(BasePPO):
         logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             logger.record("train/clip_range_vf", clip_range_vf)
+
+        if self.critic_gradient_penalty > 0:
+            logger.record("train/gradient_penalty_critic", gradients_critic.item())
+        if self.actor_gradient_penalty > 0:
+            logger.record("train/gradient_penalty_actor", gradients_actor.item())
 
         if np.isinf(temp_entropy_loss) or np.isnan(temp_entropy_loss):
             raise Exception('Gradient KABUM! entropy_loss.')
