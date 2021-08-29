@@ -172,6 +172,7 @@ class NeptuneCallback(BaseCallback):
             if mean_reward > self.best_mean_reward:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.log_dir, "best_model.plk"))
+                neptune.log_artifact(os.path.join(self.log_dir, "best_model.plk"))
 
         if self.make_video_freq != 0 and self.n_calls % self.make_video_freq == 0:
             self._make_video()
@@ -179,6 +180,11 @@ class NeptuneCallback(BaseCallback):
         return True
 
     def __del__(self):
+        try:
+            neptune.log_artifact(os.path.join(self.log_dir, "last_model.plk"))
+        except FileNotFoundError as e:
+            print(e)
+
         try:
             neptune.stop()
         except neptune.exceptions.NeptuneNoExperimentContextException:
