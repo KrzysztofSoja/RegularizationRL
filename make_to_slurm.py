@@ -2,8 +2,9 @@ import os
 
 from settings import *
 
-
+GRANT = 'plgadvancedplanning'
 OUTPUT_DIR = os.path.abspath(os.path.join(__file__, os.pardir, 'commands'))
+RETURN_DIR = os.path.abspath(os.path.join(__file__, os.pardir, 'outputs_from_run'))
 
 
 def make_slurm_prefix(expeirment_name: str,
@@ -20,13 +21,13 @@ f"""#!/bin/bash -l
 ## Maksymalny czas trwania zlecenia (format HH:MM:SS)
 #SBATCH --time={hours}:00:00 
 ## Nazwa grantu do rozliczenia zużycia zasobów
-#SBATCH -A plgcontinualrl
+#SBATCH -A {GRANT}
 ## Specyfikacja partycji
 #SBATCH -p plgrid
 ## Plik ze standardowym wyjściem
-#SBATCH --output="{output_file}"
+#SBATCH --output="{os.path.join(RETURN_DIR ,output_file)}"
 ## Plik ze standardowym wyjściem błędów
-#SBATCH --error="{error_file}"
+#SBATCH --error="{os.path.join(RETURN_DIR, error_file)}"
 
 
 ## przejscie do katalogu z ktorego wywolany zostal sbatch
@@ -46,6 +47,9 @@ with open(PATH_TO_RUN, 'r') as file:
 
 if not os.path.isdir(OUTPUT_DIR):
     os.mkdir(OUTPUT_DIR)
+    
+if not os.path.isdir(RETURN_DIR):
+    os.mkdir(RETURN_DIR)
 
 
 wrapped_commands = []
@@ -54,7 +58,7 @@ for idx, command in enumerate(commands):
     run_file += "\n\n" + load_singularity_module() + '\n'
     run_file += "\n\n" + SINGULARITY_COMMAND + command + "\n"
 
-    wrapped_command = os.path.join(OUTPUT_DIR, f"run_{idx}.sh")
+    wrapped_command = os.path.join(OUTPUT_DIR, f"run_{idx + 400}.sh")
     wrapped_commands.append(wrapped_command)
 
     with open(wrapped_command, 'w') as file:
