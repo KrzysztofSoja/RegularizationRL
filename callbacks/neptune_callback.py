@@ -2,7 +2,9 @@ import os
 import csv
 import gym
 import numpy as np
-import neptune
+# import neptune
+from . import obtrusive_call as neptune
+
 
 from typing import Tuple, Union, NoReturn, Dict, Optional, Any, List
 from neptunecontrib.api.video import log_video
