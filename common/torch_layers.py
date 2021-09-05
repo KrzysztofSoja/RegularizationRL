@@ -181,14 +181,15 @@ class MlpExtractorWithManifoldMixup(nn.Module):
     def __init__(
         self,
         feature_dim: int,
-        net_arch: List[Union[int, Dict[str, List[int]]]],
         activation_fn: Type[nn.Module],
+        net_arch: List[Union[int, Dict[str, List[int]]]] = None,
         last_layer_mixup: int = 1,
         alpha: float = 0.1,
         device: Union[th.device, str] = "auto",
     ):
         super(MlpExtractorWithManifoldMixup, self).__init__()
-
+        if net_arch is not None:
+            print("WARNING!!! Setting network architecture is not available for manifold mixup.")
         self.last_layer_mixup = max(last_layer_mixup, 2)
         if last_layer_mixup > 2:
             print(f"WARNING!!! Maximal possible layer of mixup is 2. Instead of, given value is {last_layer_mixup}. "
@@ -203,14 +204,14 @@ class MlpExtractorWithManifoldMixup(nn.Module):
         # Create networks
         # If the list of layers is empty, the network will just act as an Identity module
         self.shared_net = nn.Sequential().to(device)
-        self.policy_net = nn.Sequential(nn.Linear(in_features=4, out_features=64, bias=True),
-                                        nn.Tanh(),
+        self.policy_net = nn.Sequential(nn.Linear(in_features=feature_dim, out_features=64, bias=True),
+                                        activation_fn(),
                                         nn.Linear(in_features=64, out_features=64, bias=True),
-                                        nn.Tanh()).to(device)
-        self.value_net_layer_1 = nn.Sequential(nn.Linear(in_features=4, out_features=64, bias=True),
-                                               nn.Tanh()).to(device)
+                                        activation_fn()).to(device)
+        self.value_net_layer_1 = nn.Sequential(nn.Linear(in_features=feature_dim, out_features=64, bias=True),
+                                               activation_fn()).to(device)
         self.value_net_layer_2 = nn.Sequential(nn.Linear(in_features=64, out_features=64, bias=True),
-                                               nn.Tanh()).to(device)
+                                               activation_fn()).to(device)
 
     def __mixup_forward_values(self, features: th.Tensor, ground_truth_values: th.Tensor) \
             -> Tuple[th.Tensor, th.Tensor]:
