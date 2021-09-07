@@ -301,6 +301,7 @@ class TD3(BaseTD3):
                                                                                     replay_data.actions,
                                                                                     k=self.critic_gradient_penalty_k)
                                                                       for critic in self.critic.q_networks])
+                gradients_critics = gradients_critics.to(th.float)
                 critic_loss += gradients_critics
             critic_losses.append(critic_loss.item())
 
