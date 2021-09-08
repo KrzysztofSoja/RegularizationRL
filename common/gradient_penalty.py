@@ -35,11 +35,12 @@ def gradient_penalty(model: nn.Module, data: th.Tensor, k: float = 1,) -> th.Ten
     gradients = th.autograd.grad(outputs=prediction[1], inputs=data,
                                  grad_outputs=th.ones(prediction[1].size()),
                                  create_graph=True, retain_graph=True)[0]
+    gradients = gradients.to(th.float)
 
     gradients = gradients.view(data.shape[0], -1)
     gradients_norm = th.sqrt(th.sum(gradients ** 2, dim=1) + 1e-12)
 
-    return ((gradients_norm - k) ** 2).mean().to(th.float)
+    return ((gradients_norm - k) ** 2).mean()
 
 
 def gradient_penalty_for_continues_critic(network: nn.Module,
@@ -50,5 +51,5 @@ def gradient_penalty_for_continues_critic(network: nn.Module,
                                           share_feature_extractor: bool = False) -> th.Tensor:
     with th.set_grad_enabled(not share_feature_extractor):
         features = features_extractor(observations)
-    qvalue_input = th.cat([features, actions], dim=1)
-    return gradient_penalty(network, qvalue_input, k).to(th.float)
+    qvalue_input = th.cat([features, actions], dim=1).to(th.float)
+    return gradient_penalty(network, qvalue_input, k)
