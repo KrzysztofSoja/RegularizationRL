@@ -16,4 +16,9 @@ To install all dependencies, please run the following command:
 
 `
 pip install -r requirements.txt
+
+
+## Run
+
+To run the script, use the `main.py` file.
 `
