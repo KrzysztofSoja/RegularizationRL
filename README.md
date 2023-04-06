@@ -9,14 +9,12 @@ The result of the experiments is available here: https://drive.google.com/drive/
 
 ## Installation:
 
-Before installation, please manually install MuJoCo: https://mujoco.org.
-
 
 To install all dependencies, please run the following command:
 
 `
-pip install -r requirements.txt
-
+install.sh
+`
 
 ## Run
 
